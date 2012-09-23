@@ -1,7 +1,6 @@
 module MPileup where
 
-import Data.List (sort,group)
-import Data.Char (toUpper)
+import Data.Char (toUpper, isDigit)
 
 import AgrestiCoull
 
@@ -39,8 +38,14 @@ readPile = map (parse1 . words) . lines
     
     triples :: Char -> [String] -> [(Int,Int,Int,Int)]
     triples _ [] = []
-    triples ref (_count:bases:_quals:rest) = count (sortout ref bases) : triples ref rest
+    triples ref (_count:bases:_quals:rest) = count (filter (`elem` "ACGT") $ parse_bases ref bases) : triples ref rest
     
-    sortout :: Char -> String -> String
-    sortout ref = filter (`elem` "ACGT") . map (\x -> case x of '.' -> ref; ',' -> ref; _ -> x) . map toUpper
+    parse_bases _ [] = []
+    parse_bases ref (c:str) 
+      | c == '^'             = parse_bases ref $ drop 1 str
+      | c == '$'             = parse_bases ref str                               
+      | c == '.' || c == ',' = ref : parse_bases ref str
+      | c == '-' || c == '+' = let (cnt,rest) = span isDigit str
+                               in parse_bases ref $ drop (read cnt) rest
+      | otherwise            = toUpper c : parse_bases ref str
     count xs = (countCh 'A' xs, countCh 'C' xs, countCh 'G' xs, countCh 'T' xs) where countCh x = length . filter (==x)
