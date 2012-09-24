@@ -1,6 +1,7 @@
 module MPileup where
 
 import Data.Char (toUpper, isDigit)
+import Data.List (foldl')
 
 import AgrestiCoull
 
@@ -38,7 +39,7 @@ readPile = map (parse1 . words) . lines
     
     triples :: Char -> [String] -> [(Int,Int,Int,Int)]
     triples _ [] = []
-    triples ref (_count:bases:_quals:rest) = count (filter (`elem` "ACGT") $ parse_bases ref bases) : triples ref rest
+    triples ref (_count:bases:_quals:rest) = count (parse_bases ref bases) : triples ref rest
     
     parse_bases _ [] = []
     parse_bases ref (c:str) 
@@ -48,4 +49,17 @@ readPile = map (parse1 . words) . lines
       | c == '-' || c == '+' = let (cnt,rest) = span isDigit str
                                in parse_bases ref $ drop (read cnt) rest
       | otherwise            = toUpper c : parse_bases ref str
-    count xs = (countCh 'A' xs, countCh 'C' xs, countCh 'G' xs, countCh 'T' xs) where countCh x = length . filter (==x)
+    
+    count :: String -> (Int,Int,Int,Int)
+    count = unpack . foldl' f (C 0 0 0 0)
+      where f (C as cs gs ts) x = case x of
+              'A' -> (C (as+1) cs gs ts)
+              'C' -> (C as (cs+1) gs ts)
+              'G' -> (C as cs (gs+1) ts)
+              'T' -> (C as cs gs (ts+1))
+              'N' -> (C as cs gs ts)
+              _ -> error ("Not a nucleotide: "++show x)
+            unpack (C as cs gs ts) = (as,cs,gs,ts)
+
+
+data Counts = C !Int !Int !Int !Int
