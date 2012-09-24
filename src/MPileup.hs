@@ -43,9 +43,9 @@ readPile = map (parse1 . words) . lines
     
     parse_bases _ [] = []
     parse_bases ref (c:str) 
-      | c == '^'             = parse_bases ref $ drop 1 str
-      | c == '$'             = parse_bases ref str                               
       | c == '.' || c == ',' = ref : parse_bases ref str
+      | c == '*' || c == '$' = parse_bases ref str -- * is empty string
+      | c == '^'             = parse_bases ref $ drop 1 str
       | c == '-' || c == '+' = let (cnt,rest) = span isDigit str
                                in parse_bases ref $ drop (read cnt) rest
       | otherwise            = toUpper c : parse_bases ref str
