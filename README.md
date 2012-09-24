@@ -39,18 +39,18 @@ otherwise you'd see quite a larger number of lines), we should get
 something like:
 
 ~~~~~~
-                                <-lib 1-->      <-lib2-->       <-lib3-->               conf2   conf3
+                                <-lib 1-->      <-lib 2-->      <-lib3 -->              conf2   conf3
                                  A  C G T        A C G T         A C G T                ACGT    ACGT             
 ATLCOD1Ac00006  227     C       (0,11,0,0)      (0,0,0,0)       (0,2,0,4)       -       ....    .+.+
-ATLCOD1Ac00014  309     C       (3,16,0,0)      (0,7,0,0)       (0,72,0,0)      -       ....    ++..
-ATLCOD1Ac00014  466     T       (0,0,0,5)       (0,0,0,1)       (10,2,4,8)      -       ....    ...+
 ATLCOD1Ac00014  471     G       (0,0,4,0)       (0,0,0,0)       (8,0,2,0)       -       ....    +.+.
-ATLCOD1Ac00014  482     G       (0,0,4,0)       (0,0,0,0)       (12,0,12,12)    -       ....    ..+.
 ATLCOD1Ac00021  350     C       (0,7,0,0)       (0,1,0,0)       (0,3,0,10)      -       ....    .+.+
 ATLCOD1Ac00023  87      C       (0,33,0,0)      (0,1,1,0)       (0,14,0,0)      -       .++.    ....
 ATLCOD1Ac00027  101     G       (8,0,1,0)       (0,0,0,0)       (0,0,3,0)       -       ....    +.+.
 ATLCOD1Ac00027  314     T       (1,0,0,9)       (0,0,0,0)       (6,0,0,2)       -       ....    +..+
 ATLCOD1Ac00027  408     C       (0,13,0,1)      (0,0,0,0)       (0,5,0,6)       -       ....    .+.+
+ATLCOD1Ac00035  258     A       (25,0,0,12)     (4,0,0,0)       (27,0,0,2)      -       ....    +..+
+ATLCOD1Ac00036  171     C       (0,8,0,4)       (0,4,0,0)       (0,19,0,0)      -       ....    .+.+
+ATLCOD1Ac00036  242     A       (2,0,14,0)      (2,0,2,0)       (9,0,6,0)       -       ....    +.+.
 ~~~~~~
 
 Here we see that each library has had the allele frequencies counted
