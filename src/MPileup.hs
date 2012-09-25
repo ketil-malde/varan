@@ -1,18 +1,20 @@
 module MPileup where
 
-import Data.Char (toUpper, isDigit)
-import Data.List (foldl')
+import Data.Char (toUpper)
+import Data.List (foldl',intercalate,nub)
 
 import AgrestiCoull
+import Variants
 
-showPile :: (String,String,Char,[(Int,Int,Int,Int)]) -> String
-showPile (chr,pos,ref,stats@(s1:ss)) = chr++"\t"++pos++"\t"++[ref]
-                               ++concat ["\t"++show s | s <- stats]
-                               ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
+showPile :: (String,String,Char,[Counts]) -> String
+showPile (chr,pos,ref,stats@(s1:ss)) = 
+  chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
+  ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
+  ++"\t"++showV stats
 
-conf :: (Int, Int, Int, Int) -> (Int, Int, Int, Int) -> String
-conf (a1,c1,g1,t1) (a2,c2,g2,t2) = let 
-  s1 = a1+c1+g1+t1
+conf :: Counts -> Counts -> String
+conf (C a1 c1 g1 t1 _v1) (C a2 c2 g2 t2 _v2) = let 
+  s1 = a1+c1+g1+t1  -- don't count structural variants
   s2 = a2+c2+g2+t2
   in [overlap (a1,s1-a1) (a2,s2-a2)
      ,overlap (c1,s1-c1) (c2,s2-c2)
@@ -32,34 +34,39 @@ overlap (succ1,fail1) (succ2,fail2) =
 
 -- count major allele in first sample
 -- return chrom, pos, ref, 
-readPile :: String -> [(String,String,Char,[(Int,Int,Int,Int)])]
+readPile :: String -> [(String,String,Char,[Counts])]
 readPile = map (parse1 . words) . lines
   where
-    parse1 (chr:pos:(ref:_):rest) = (chr,pos,ref,triples ref rest)
+    parse1 (chr:pos:(ref:_):rest) = (chr,pos,ref,map (count . snd) $ triples ref rest)
+    parse1 xs = error ("parse1: insufficiently long line:"++show xs)
     
-    triples :: Char -> [String] -> [(Int,Int,Int,Int)]
     triples _ [] = []
-    triples ref (_count:bases:_quals:rest) = count (parse_bases ref bases) : triples ref rest
+    triples ref (cnt:bases:_quals:rest) = (cnt,parse ref $ map toUpper bases) : triples ref rest
+    triples _ _ = error "triples: incorrect number of columns"
     
-    parse_bases _ [] = []
-    parse_bases ref (c:str) 
-      | c == '.' || c == ',' = ref : parse_bases ref str
-      | c == '*' || c == '$' = parse_bases ref str -- * is empty string
-      | c == '^'             = parse_bases ref $ drop 1 str
-      | c == '-' || c == '+' = let (cnt,rest) = span isDigit str
-                               in parse_bases ref $ drop (read cnt) rest
-      | otherwise            = toUpper c : parse_bases ref str
-    
-    count :: String -> (Int,Int,Int,Int)
-    count = unpack . foldl' f (C 0 0 0 0)
-      where f (C as cs gs ts) x = case x of
-              'A' -> (C (as+1) cs gs ts)
-              'C' -> (C as (cs+1) gs ts)
-              'G' -> (C as cs (gs+1) ts)
-              'T' -> (C as cs gs (ts+1))
-              'N' -> (C as cs gs ts)
-              _ -> error ("Not a nucleotide: "++show x)
-            unpack (C as cs gs ts) = (as,cs,gs,ts)
+    count :: [Variant] -> Counts
+    count = foldl' f (C 0 0 0 0 [])
+      where f (C as cs gs ts vs) x = case x of
+              Nuc 'A' -> (C (as+1) cs gs ts vs)
+              Nuc 'C' -> (C as (cs+1) gs ts vs)
+              Nuc 'G' -> (C as cs (gs+1) ts vs)
+              Nuc 'T' -> (C as cs gs (ts+1) vs)
+              Nuc 'N' -> (C as cs gs ts vs)
+              Nuc _   -> error ("Not a nucleotide: "++show x)
+              v -> (C as cs gs ts (v:vs))
 
 
-data Counts = C !Int !Int !Int !Int
+data Counts = C !Int !Int !Int !Int [Variant]
+
+-- | Show SNP counts
+showC :: Counts -> String
+showC (C as cs gs ts _) = " "++(intercalate " " $ map show [as,cs,gs,ts])++" "
+
+-- | Show structural variant count
+showV :: [Counts] -> String
+showV cs = let
+  getv (C _ _ _ _ v) = v
+  vs = nub $ concatMap getv cs
+  countV :: Variant -> Counts -> Int
+  countV v c = length . filter (==v) $ getv c
+  in intercalate "\t" (show vs:[unwords $ map (\v -> show $ countV v c) vs | c <- cs])
