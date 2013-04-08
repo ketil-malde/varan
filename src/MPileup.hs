@@ -5,13 +5,25 @@ import Data.List (foldl',intercalate,nub)
 
 import AgrestiCoull
 import Variants
+import Text.Printf
 
 showPile :: (String,String,Char,[Counts]) -> String
 showPile (chr,pos,ref,stats@(s1:ss)) = 
   chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
   ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
+  ++concat [printf "\t%.3f" (dist s1 s) | s <- ss]
   ++"\t"++showV stats
 
+-- | calcuate normalized vector distance between frequency counts
+dist :: Counts -> Counts -> Double
+dist (C a1 c1 g1 t1 _v1) (C a2 c2 g2 t2 _v2) = let
+  vnorm = sqrt . sum . map ((**2))
+  d1 = vnorm $ map fromIntegral [a1,c1,g1,t1]
+  d2 = vnorm $ map fromIntegral [a2,c2,g2,t2]
+  in vnorm $ [ fromIntegral x/d1-fromIntegral y/d2 | (x,y) <- zip [a1,c1,g1,t1] [a2,c2,g2,t2]]
+
+-- | Use AgrestiCoull to calculate significant differences between
+--   allele frequency spectra
 conf :: Counts -> Counts -> String
 conf (C a1 c1 g1 t1 _v1) (C a2 c2 g2 t2 _v2) = let 
   s1 = a1+c1+g1+t1  -- don't count structural variants
