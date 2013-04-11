@@ -12,6 +12,7 @@ showPile (chr,pos,ref,stats@(s1:ss)) =
   chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
   ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
   ++concat [printf "\t%.3f" (dist s1 s) | s <- ss]
+  ++printf "\t%.3f" (f_st (s1:ss))
   ++"\t"++showV stats
 
 -- | calcuate normalized vector distance between frequency counts
@@ -21,6 +22,22 @@ dist (C a1 c1 g1 t1 _v1) (C a2 c2 g2 t2 _v2) = let
   d1 = vnorm $ map fromIntegral [a1,c1,g1,t1]
   d2 = vnorm $ map fromIntegral [a2,c2,g2,t2]
   in vnorm $ [ fromIntegral x/d1-fromIntegral y/d2 | (x,y) <- zip [a1,c1,g1,t1] [a2,c2,g2,t2]]
+
+f_st :: [Counts] -> Double
+f_st cs = let
+  toList (C x y z v _) = map fromIntegral [x,y,z,v]
+  cs' = map toList cs
+  hz :: [Double] -> Double
+  hz xs' = let s = sum xs'
+           in 1 - sum (map ((**2) . (/s)) xs')
+  sumList = foldr (zipWith (+)) [0,0,0,0]            
+  h_tot :: Double
+  h_tot = hz $ sumList $ cs'
+  h_subs, weights :: [Double]
+  h_subs = map hz cs'
+  weights = let total = sum $ concat cs'
+            in [sum c/total | c <- cs']
+  in (h_tot - sum (zipWith (*) h_subs weights)) / h_tot
 
 -- | Use AgrestiCoull to calculate significant differences between
 --   allele frequency spectra
