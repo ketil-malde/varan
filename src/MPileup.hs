@@ -7,25 +7,35 @@ import AgrestiCoull
 import Variants
 import Text.Printf
 
+-- Helper funciton
+toList :: Counts -> [Double]
+toList (C x y z v _) = map fromIntegral [x,y,z,v]
+
 showPile :: (String,String,Char,[Counts]) -> String
 showPile (chr,pos,ref,stats@(s1:ss)) = 
   chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
   ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
-  ++concat [printf "\t%.3f" (dist s1 s) | s <- ss]
+  ++concat [printf "\t%.3f" (angle s1 s) | s <- ss]
   ++printf "\t%.3f" (f_st (s1:ss))
   ++"\t"++showV stats
 
 -- | calcuate normalized vector distance between frequency counts
 dist :: Counts -> Counts -> Double
-dist (C a1 c1 g1 t1 _v1) (C a2 c2 g2 t2 _v2) = let
+dist c1 c2 = let
   vnorm = sqrt . sum . map ((**2))
-  d1 = vnorm $ map fromIntegral [a1,c1,g1,t1]
-  d2 = vnorm $ map fromIntegral [a2,c2,g2,t2]
-  in vnorm $ [ fromIntegral x/d1-fromIntegral y/d2 | (x,y) <- zip [a1,c1,g1,t1] [a2,c2,g2,t2]]
+  d1 = vnorm $ toList c1
+  d2 = vnorm $ toList c2
+  in vnorm $ [ x/d1-y/d2 | (x,y) <- zip (toList c1) (toList c2)]
+
+-- | similar to dist, but from 1 (equal) to 0 (orthogonal)
+angle :: Counts -> Counts -> Double
+angle c1' c2' = let
+  (c1,c2) = (toList c1', toList c2')
+  vnorm = sqrt . sum . map ((**2))
+  in sum $ zipWith (*) (map (/vnorm c1) c1) (map (/vnorm c2) c2)
 
 f_st :: [Counts] -> Double
 f_st cs = let
-  toList (C x y z v _) = map fromIntegral [x,y,z,v]
   cs' = map toList cs
   hz :: [Double] -> Double
   hz xs' = let s = sum xs'
