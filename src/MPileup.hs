@@ -1,4 +1,4 @@
-module MPileup where
+module MPileup (readPile, showPile) where
 
 import Data.Char (toUpper)
 import Data.List (foldl',intercalate,nub)
@@ -16,6 +16,7 @@ sumList :: [[Double]] -> [Double]
 sumList = foldr (zipWith (+)) [0,0,0,0]
 
 showPile :: (String,String,Char,[Counts]) -> String
+showPile (_,_,_,[]) = error "Pileup with no data?"
 showPile (chr,pos,ref,stats@(s1:ss)) = 
   chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
   ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
