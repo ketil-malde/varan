@@ -7,9 +7,13 @@ import AgrestiCoull
 import Variants
 import Text.Printf
 
--- Helper funciton
+-- Convert 'Counts' to a list of allele counts
 toList :: Counts -> [Double]
 toList (C x y z v _) = map fromIntegral [x,y,z,v]
+
+-- | Pointwise summation of the input lists
+sumList :: [[Double]] -> [Double]
+sumList = foldr (zipWith (+)) [0,0,0,0]
 
 showPile :: (String,String,Char,[Counts]) -> String
 showPile (chr,pos,ref,stats@(s1:ss)) = 
@@ -34,20 +38,21 @@ angle c1' c2' = let
   vnorm = sqrt . sum . map ((**2))
   in sum $ zipWith (*) (map (/vnorm c1) c1) (map (/vnorm c2) c2)
 
+-- | Calculate F_ST
 f_st :: [Counts] -> Double
 f_st cs = let
   cs' = map toList cs
   hz :: [Double] -> Double
   hz xs' = let s = sum xs'
            in 1 - sum (map ((**2) . (/s)) xs')
-  sumList = foldr (zipWith (+)) [0,0,0,0]            
   h_tot :: Double
   h_tot = hz $ sumList $ cs'
   h_subs, weights :: [Double]
   h_subs = map hz cs'
   weights = let total = sum $ concat cs'
             in [sum c/total | c <- cs']
-  in (h_tot - sum (zipWith (*) h_subs weights)) / h_tot
+  in if h_tot == 0 then 0.0 -- no heterozygosity in the population!
+     else (h_tot - sum (zipWith (*) h_subs weights)) / h_tot
 
 -- | Use AgrestiCoull to calculate significant differences between
 --   allele frequency spectra
