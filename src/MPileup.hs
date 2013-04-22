@@ -22,6 +22,7 @@ showPile (chr,pos,ref,stats@(s1:ss)) =
   ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
   ++concat [printf "\t%.3f" (angle s1 s) | s <- ss]
   ++printf "\t%.3f" (f_st (s1:ss))
+  ++printf "\t%.2f" (pi_k (s1:ss))
   ++"\t"++showV stats
 
 -- | calcuate normalized vector distance between frequency counts
@@ -54,6 +55,15 @@ f_st cs = let
             in [sum c/total | c <- cs']
   in if h_tot == 0 then 0.0 -- no heterozygosity in the population!
      else (h_tot - sum (zipWith (*) h_subs weights)) / h_tot
+
+-- | Calculate Pi (my version), the expected number of differences
+-- between two random samples from the populations.
+pi_k :: [Counts] -> Double
+pi_k cs' = let
+  cs = map toList cs'
+  no_diff = sum $ foldr1 (zipWith (*)) cs
+  all_pairs = product $ map sum cs
+  in (all_pairs - no_diff) / all_pairs
 
 -- | Use AgrestiCoull to calculate significant differences between
 --   allele frequency spectra
