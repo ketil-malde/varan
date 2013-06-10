@@ -16,7 +16,7 @@ Description:   Using Agresti-Coull estimation of confidence interval, report
 Executable deltasnp
     Hs-Source-Dirs:  src
     Main-Is:         Main.hs
-    Other-Modules:   AgrestiCoull, MPileup
-    Build-Depends:   base >= 4 && < 5
+    Other-Modules:   AgrestiCoull, MPileup, RandomSelect, Variants
+    Build-Depends:   base >= 4 && < 5, random, mtl
     Ghc-Options:     -rtsopts -Wall
 
