@@ -7,14 +7,6 @@ import AgrestiCoull
 import Variants
 import Text.Printf
 
--- Convert 'Counts' to a list of allele counts
-toList :: Counts -> [Double]
-toList (C x y z v _) = map fromIntegral [x,y,z,v]
-
--- | Pointwise summation of the input lists
-sumList :: [[Double]] -> [Double]
-sumList = foldr (zipWith (+)) [0,0,0,0]
-
 showPile :: (String,String,Char,[Counts]) -> String
 showPile (_,_,_,[]) = error "Pileup with no data?"
 showPile (chr,pos,ref,stats@(s1:ss)) = 
@@ -110,8 +102,6 @@ readPile = map (parse1 . words) . lines
               Nuc _   -> error ("Not a nucleotide: "++show x)
               v -> (C as cs gs ts (v:vs))
 
-
-data Counts = C !Int !Int !Int !Int [Variant]
 
 -- | Show SNP counts
 showC :: Counts -> String
