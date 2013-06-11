@@ -4,12 +4,26 @@ import System.Random
 import Control.Monad.State
 import Variants
 
+pval_count :: Int
+pval_count = 1000
+
+pval :: RandomGen g => g -> ([Counts] -> Double) -> [Counts] -> (Double,Double)
+pval g f cs = let thresh = f cs
+                  xs = take pval_count $ rselect g cs
+                  n = length $ filter (>= thresh) $ map f xs
+              in (thresh, fromIntegral n / fromIntegral pval_count)
+
 type AlleleSample = [Int]
 
 -- generate an infinite stream of sampled allele distributions
-rselect :: RandomGen g => g -> [Counts] -> [[AlleleSample]]
-rselect g cs = fst $ runState sel (g,tot,sum_al,pool_sizes)
+rselect :: RandomGen g => g -> [Counts] -> [[Counts]]
+rselect g cs = map fromLists $ fst $ runState sel (g,tot,sum_al,pool_sizes)
   where (tot,sum_al,pool_sizes) = count cs
+        
+fromLists :: [AlleleSample] -> [Counts]
+fromLists = map f
+  where f [a,b,c,d] = C a b c d []
+        f _ = error "Incorrect allelesample"
         
 sel :: RandomGen g => State (g,Int,AlleleSample,[Int]) [[AlleleSample]]
 sel = do
