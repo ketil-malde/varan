@@ -9,4 +9,5 @@ main = do
   ls <-  readPile `fmap` case f of 
     [] -> getContents 
     [fn] -> readFile fn
-  putStrLn $ unlines $ map showPile ls
+  mapM_ (\x -> do l <- showPile x
+                  putStrLn l) ls

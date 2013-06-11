@@ -1,4 +1,4 @@
-module MPileup (readPile, showPile) where
+module MPileup (readPile, showPile, f_st) where
 
 import Data.Char (toUpper)
 import Data.List (foldl',intercalate,nub)
@@ -6,16 +6,23 @@ import Data.List (foldl',intercalate,nub)
 import AgrestiCoull
 import Variants
 import Text.Printf
+import RandomSelect
+import System.Random
 
-showPile :: (String,String,Char,[Counts]) -> String
+showPile :: (String,String,Char,[Counts]) -> IO String
 showPile (_,_,_,[]) = error "Pileup with no data?"
-showPile (chr,pos,ref,stats@(s1:ss)) = 
-  chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
-  ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
-  ++concat [printf "\t%.3f" (angle s1 s) | s <- ss]
-  ++printf "\t%.3f" (f_st (s1:ss))
-  ++printf "\t%.2f" (pi_k (s1:ss))
-  ++"\t"++showV stats
+showPile (chr,pos,ref,stats@(s1:ss)) = do
+  g <- newStdGen
+  return (
+    chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
+    ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
+    --  ++ conf_all (s1:ss)
+    ++concat [printf "\t%.3f" (angle s1 s) | s <- ss]
+    ++print_pval (pval g f_st (s1:ss))
+    ++print_pval (pval g pi_k (s1:ss))
+    ++"\t"++showV stats)
+
+print_pval (a,b) = printf "\t%.3f p=%.3f" a b
 
 -- | calcuate normalized vector distance between frequency counts
 dist :: Counts -> Counts -> Double
@@ -56,6 +63,20 @@ pi_k cs' = let
   no_diff = sum $ foldr1 (zipWith (*)) cs
   all_pairs = product $ map sum cs
   in (all_pairs - no_diff) / all_pairs
+
+-- | Use AgrestiCoull to calculate significant difference from 
+--   a combined distribution, with error:
+conf_all :: [Counts] -> String
+conf_all cs' = let
+  cs = map toList cs'
+  [a,c,g,t] = map round  $ sumList cs -- add error!
+  p = id -- pseudo 1 30
+  in concat ["\t"++x | x <- map (conf (p $ C a c g t [])) cs']
+
+pseudo :: Int -> Int ->Counts -> Counts
+pseudo tr err (C a c g t vs) = 
+  let s = tr + (a+c+g+t) `div` err 
+  in C (a+s) (c+s) (g+s) (t+s) vs
 
 -- | Use AgrestiCoull to calculate significant differences between
 --   allele frequency spectra
