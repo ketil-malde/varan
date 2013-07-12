@@ -11,7 +11,7 @@ pval :: RandomGen g => g -> ([Counts] -> Double) -> [Counts] -> (Double,Double)
 pval g f cs = let thresh = f cs
                   xs = take pval_count $ rselect g cs
                   n = length $ filter (>= thresh) $ map f xs
-              in (thresh, fromIntegral n / fromIntegral pval_count)
+              in (thresh, if thresh > 0 then fromIntegral n / fromIntegral pval_count else 1)
 
 type AlleleSample = [Int]
 
