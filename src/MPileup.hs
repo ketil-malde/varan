@@ -22,6 +22,7 @@ showPile (chr,pos,ref,stats@(s1:ss)) = do
     ++print_pval (pval g pi_k (s1:ss))
     ++"\t"++showV stats)
 
+print_pval :: (Double, Double) -> String
 print_pval (a,b) = printf "\t%.3f p=%.3f" a b
 
 -- | calcuate normalized vector distance between frequency counts
