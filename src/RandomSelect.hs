@@ -3,15 +3,22 @@ module RandomSelect where
 import System.Random
 import Control.Monad.State
 import Variants
+import AgrestiCoull (confidenceInterval)
 
-pval_count :: Int
-pval_count = 1000
+pval_max_count :: Int
+pval_max_count = 1000
+
+pval_acc :: Double
+pval_acc = 0.01
 
 pval :: RandomGen g => g -> ([Counts] -> Double) -> [Counts] -> (Double,Double)
 pval g f cs = let thresh = f cs
-                  xs = take pval_count $ rselect g cs
-                  n = length $ filter (>= thresh) $ map f xs
-              in (thresh, if thresh > 0 then fromIntegral n / fromIntegral pval_count else 1)
+                  xs = take pval_max_count $ rselect g cs
+                  go suc tot (y:ys) = let (a,b) = confidenceInterval 1.0 suc (tot-suc) 
+                                      in if b-a <= pval_acc then fromIntegral suc/fromIntegral tot 
+                                         else go (suc + if f y >= thresh then 1 else 0) (tot+1) ys
+                  go suc tot [] = fromIntegral suc/fromIntegral tot
+              in if thresh > 0 then (thresh, go 0 0 xs) else (0,1)
 
 type AlleleSample = [Int]
 
