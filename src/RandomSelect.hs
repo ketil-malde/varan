@@ -24,26 +24,26 @@ type AlleleSample = [Int]
 
 -- generate an infinite stream of sampled allele distributions
 rselect :: RandomGen g => g -> [Counts] -> [[Counts]]
-rselect g cs = map fromLists $ fst $ runState sel (g,tot,sum_al,pool_sizes)
-  where (tot,sum_al,pool_sizes) = count cs
+rselect g cs = map fromLists $ fst $ runState sel (g,sum_al,pool_sizes)
+  where (_tot,sum_al,pool_sizes) = count cs
         
 fromLists :: [AlleleSample] -> [Counts]
 fromLists = map f
   where f [a,b,c,d] = C a b c d []
         f _ = error "Incorrect allelesample"
         
-sel :: RandomGen g => State (g,Int,AlleleSample,[Int]) [[AlleleSample]]
+sel :: RandomGen g => State (g,AlleleSample,[Int]) [[AlleleSample]]
 sel = do
   a <- select1
   as <- sel
   return (a:as)
         
-select1 :: RandomGen g => State (g,Int,AlleleSample,[Int]) [AlleleSample]
+select1 :: RandomGen g => State (g,AlleleSample,[Int]) [AlleleSample]
 select1 = do
   -- select randomly for each p_sz
-  (g,tot,s_al,p_sz) <- get
+  (g,s_al,p_sz) <- get
   let (g',g'') = split g
-  put (g'',tot,s_al,p_sz) -- restore state
+  put (g'',s_al,p_sz) -- restore state
   return $ pickNs g' p_sz s_al
 
 -- pick a random paritioning of alleles
