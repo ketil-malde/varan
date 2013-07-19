@@ -8,18 +8,21 @@ import Variants
 import Text.Printf
 import RandomSelect
 import System.Random
+import Control.Parallel
 
 showPile :: (String,String,Char,[Counts]) -> IO String
 showPile (_,_,_,[]) = error "Pileup with no data?"
 showPile (chr,pos,ref,stats@(s1:ss)) = do
   g <- newStdGen
-  return (
+  let (f,pf) = pval g f_st (s1:ss)
+      (p,pp) = pval g pi_k (s1:ss)
+  pf `par` pp `pseq` return (
     chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
     ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
     --  ++ conf_all (s1:ss)
     ++concat [printf "\t%.3f" (angle s1 s) | s <- ss]
-    ++print_pval (pval g f_st (s1:ss))
-    ++print_pval (pval g pi_k (s1:ss))
+    ++print_pval (f,pf)
+    ++print_pval (p,pp)
     ++"\t"++showV stats)
 
 print_pval :: (Double, Double) -> String
