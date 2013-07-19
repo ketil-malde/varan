@@ -20,7 +20,7 @@ pval g f cs = let thresh = f cs
                   go suc tot [] = fromIntegral suc/fromIntegral tot
               in if thresh > 0 then (thresh, go 0 0 xs) else (0,1)
 
-type AlleleSample = [Int]
+type AlleleSample = (Int,Int,Int,Int)
 
 -- generate an infinite stream of sampled allele distributions
 rselect :: RandomGen g => g -> [Counts] -> [[Counts]]
@@ -29,8 +29,7 @@ rselect g cs = map fromLists $ fst $ runState sel (g,sum_al,pool_sizes)
         
 fromLists :: [AlleleSample] -> [Counts]
 fromLists = map f
-  where f [a,b,c,d] = C a b c d []
-        f _ = error "Incorrect allelesample"
+  where f (a,b,c,d) = C a b c d []
         
 sel :: RandomGen g => State (g,AlleleSample,[Int]) [[AlleleSample]]
 sel = do
@@ -46,33 +45,42 @@ select1 = do
   put (g'',s_al,p_sz) -- restore state
   return $ pickNs g' p_sz s_al
 
--- pick a random paritioning of alleles
+-- pick a random sampling of alleles given pool sizes
 pickNs :: RandomGen g => g -> [Int] -> AlleleSample -> [AlleleSample]
 pickNs _ [] _als = [] -- verify that als is empty
 pickNs g (p:ps) als = let
   (g1,g2) = split g
-  (this,rest) = pickN' g1 p als
-  in this : pickNs g2 ps rest
-  
-pickN' :: RandomGen g => g -> Int -> AlleleSample -> (AlleleSample,AlleleSample)
-pickN' = go [0,0,0,0]
-  where go acc _ 0 als = (acc,als)
-        go acc g cnt als = 
-          let (n,g') = randomR (1,sum als) g
-              xs = pick n als
-          in go (add xs acc) g' (cnt-1) (sub als xs)
-        add = zipWith (+)
-        sub = zipWith (-)
+  in pickN' g1 als p : pickNs g2 ps als
 
+-- sample alleles given randomgen, count, and sum alleles (i.e. distribution)
+pickN' :: RandomGen g => g -> AlleleSample -> Int -> AlleleSample
+pickN' g als = go (0,0,0,0) g
+  where
+        go acc _ 0 = acc
+        go acc g1 cnt = 
+          let (i,g2) = randomR (1,sum' als) g1
+          in go (add i als acc) g2 (cnt-1)
+        sum' (a,b,c,d) = a+b+c+d
+        
 -- count total alleles, number of each variant, and number in each count
-count :: [Counts] -> (Int,[Int],[Int])
+count :: [Counts] -> (Int,AlleleSample,[Int])
 count cs = let xs = sumList . map toList $ cs
                ys = map (sum . toList) cs
-           in (sum xs,xs,ys)
-        
+               tuple [a,b,c,d] = (a,b,c,d)
+           in (sum xs,tuple xs,ys)
+
+add :: Int -> AlleleSample -> AlleleSample -> AlleleSample
+add i (a,b,c,d) (x,y,z,w)
+  | i <= a = (x+1,y,z,w)
+  | i <= a+b = (x,y+1,z,w)
+  | i <= a+b+c = (x,y,z+1,w)               
+  | i <= a+b+c+d = (x,y,z,w+1)               
+  | otherwise = error "too high i"
+
+{-
 -- remove allele number x from input
-pick :: Int -> [Int] -> [Int]
+pick :: Int -> AlleleSample -> AlleleSample
 pick x (a:as) | x <= a = 1 : map (const 0) as
               | otherwise = 0 : pick (x-a) as
 pick _ [] = error "pick ran out of input, x too large"
-              
+-}
