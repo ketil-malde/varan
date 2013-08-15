@@ -1,4 +1,4 @@
-Name:          deltasnp
+Name:          varan
 Version:       0.1
 License:       GPL
 Cabal-Version: >= 1.6
@@ -13,7 +13,7 @@ Description:   Using Agresti-Coull estimation of confidence interval, report
 	       '*' for 99%).
 
 -- Using IO arrays (baseline)
-Executable deltasnp
+Executable varan
     Hs-Source-Dirs:  src
     Main-Is:         Main.hs
     Other-Modules:   AgrestiCoull, MPileup, RandomSelect, Variants

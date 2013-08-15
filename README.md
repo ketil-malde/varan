@@ -1,4 +1,4 @@
-# Brief user guide for deltasnp
+# Brief user guide for varan
 
 This is a small guide for an even smaller program that analyses gene
 variant data from pooled samples, with the intention of identifying
@@ -12,7 +12,7 @@ First you need to align your pooled reads into one BAM-file each, say
 Basically, you should be able to get away with something like:
 
 ~~~~~~
-samtools mpileup -f ref.fasta sample1.bam sample2.bam sample3.bam | deltasnp | grep '[+*]' > OUT
+samtools mpileup -f ref.fasta sample1.bam sample2.bam sample3.bam | varan | grep '[+*]' > OUT
 ~~~~~~
 
 The output from `samtools pileup` looks something like this:
@@ -34,7 +34,7 @@ ATLCOD1Ac00001  39      C       1       .       A       0       *       *       
 
 ## Output
 
-After filtering this through `deltansp` (and `grep` as above,
+After filtering this through `varan` (and `grep` as above,
 otherwise you'd see quite a larger number of lines), we should get
 something like:
 
