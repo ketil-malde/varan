@@ -18,5 +18,5 @@ Executable deltasnp
     Main-Is:         Main.hs
     Other-Modules:   AgrestiCoull, MPileup, RandomSelect, Variants
     Build-Depends:   base >= 4 && < 5, random, mtl, parallel
-    Ghc-Options:     -rtsopts -Wall
+    Ghc-Options:     -rtsopts -Wall -threaded -with-rtsopts=-N
 
