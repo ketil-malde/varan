@@ -1,7 +1,7 @@
 module MPileup (readPile, showPile, f_st) where
 
 import Data.Char (toUpper)
-import Data.List (foldl',intercalate,nub)
+import Data.List (foldl',intercalate,nub,(!!),elemIndex)
 
 import AgrestiCoull
 import Variants
@@ -23,7 +23,17 @@ showPile (chr,pos,ref,stats@(s1:ss)) = do
     ++concat [printf "\t%.3f" (angle s1 s) | s <- ss]
     ++print_pval (f,pf)
     ++print_pval (p,pp)
+    ++concat [printf "\t%.2f" (uncurry ci_dist $ major_allele s1 s) | s <- ss]
     ++"\t"++showV stats)
+
+-- pick out major allele in first count, and output number of same/different
+major_allele :: Counts -> Counts -> ((Int,Int),(Int,Int))
+major_allele (C a b c d _) (C e f g h _) =
+  let s1 = [a,b,c,d] 
+      s2 = [e,f,g,h]
+      m = maximum s1
+      Just i = elemIndex m s1
+  in ((m, sum s1-m),(s2!!i,sum [s2!!j | j <- [0..3], j /= i]))
 
 print_pval :: (Double, Double) -> String
 print_pval (a,b) = printf "\t%.3f p=%.3f" a b
@@ -103,6 +113,19 @@ overlap (succ1,fail1) (succ2,fail2) =
            (k2,l2) = confidenceInterval 2.326 succ2 fail2     
        in if k2>=l1 || k1>=l2 then '*' else '+'
      else '.'
+
+-- calculate distance between approximate distributions
+-- in terms of their standard deviation.  Perhaps use binomial distribution directly?
+-- This is a z-score, i.e. score of 2 means that the 95% CIs barely overlap.
+ci_dist :: (Int,Int) -> (Int,Int) -> Double
+ci_dist (s1,f1) (s2,f2) = 
+  let (i1,j1) = confidenceInterval 1.0 s1 f1
+      (i2,j2) = confidenceInterval 1.0 s2 f2
+      mu1 = i1+j1 -- all values are times two (so it cancels out)
+      mu2 = i2+j2
+      sd1 = j1-i1
+      sd2 = j2-i2
+  in if sd1+sd2 == 0 then 0 else abs (mu2-mu1)/(sd1+sd2)
 
 -- count major allele in first sample
 -- return chrom, pos, ref, 
