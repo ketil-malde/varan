@@ -13,16 +13,17 @@ import Control.Parallel
 showPile :: (String,String,Char,[Counts]) -> IO String
 showPile (_,_,_,[]) = error "Pileup with no data?"
 showPile (chr,pos,ref,stats@(s1:ss)) = do
-  g <- newStdGen
+{-  g <- newStdGen
   let (f,pf) = pval g f_st (s1:ss)
       (p,pp) = pval g pi_k (s1:ss)
-  pf `par` pp `pseq` return (
+  pf `par` pp `pseq` -}
+  return (
     chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
     ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
     --  ++ conf_all (s1:ss)
     ++concat [printf "\t%.3f" (angle s1 s) | s <- ss]
-    ++print_pval (f,pf)
-    ++print_pval (p,pp)
+    ++printf "\t%.3f" (f_st (s1:ss))  -- print_pval (f,pf)
+    ++printf "\t%.3f" (pi_k (s1:ss))  -- print_pval (p,pp)
     ++concat [printf "\t%.2f" (uncurry ci_dist $ major_allele s1 s) | s <- ss]
     ++"\t"++showV stats)
 
