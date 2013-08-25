@@ -1,7 +1,7 @@
 module MPileup (readPile, showPile, f_st) where
 
 import Data.Char (toUpper)
-import Data.List (foldl',intercalate,nub,(!!),elemIndex)
+import Data.List (foldl',intercalate,nub,elemIndex)
 
 import AgrestiCoull
 import Variants
