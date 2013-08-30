@@ -12,7 +12,7 @@ First you need to align your pooled reads into one BAM-file each, say
 Basically, you should be able to get away with something like:
 
 ~~~~~~
-samtools mpileup -f ref.fasta sample1.bam sample2.bam sample3.bam | varan | grep '[+*]' > OUT
+samtools mpileup -f ref.fasta sample1.bam sample2.bam sample3.bam | varan > OUT
 ~~~~~~
 
 The output from `samtools pileup` looks something like this:
@@ -39,18 +39,18 @@ otherwise you'd see quite a larger number of lines), we should get
 something like:
 
 ~~~~~~
-                                <-lib 1-->      <-lib 2-->      <-lib3 -->              conf2   conf3
-                                 A  C G T        A C G T         A C G T                ACGT    ACGT             
-ATLCOD1Ac00006  227     C       (0,11,0,0)      (0,0,0,0)       (0,2,0,4)       -       ....    .+.+
-ATLCOD1Ac00014  471     G       (0,0,4,0)       (0,0,0,0)       (8,0,2,0)       -       ....    +.+.
-ATLCOD1Ac00021  350     C       (0,7,0,0)       (0,1,0,0)       (0,3,0,10)      -       ....    .+.+
-ATLCOD1Ac00023  87      C       (0,33,0,0)      (0,1,1,0)       (0,14,0,0)      -       .++.    ....
-ATLCOD1Ac00027  101     G       (8,0,1,0)       (0,0,0,0)       (0,0,3,0)       -       ....    +.+.
-ATLCOD1Ac00027  314     T       (1,0,0,9)       (0,0,0,0)       (6,0,0,2)       -       ....    +..+
-ATLCOD1Ac00027  408     C       (0,13,0,1)      (0,0,0,0)       (0,5,0,6)       -       ....    .+.+
-ATLCOD1Ac00035  258     A       (25,0,0,12)     (4,0,0,0)       (27,0,0,2)      -       ....    +..+
-ATLCOD1Ac00036  171     C       (0,8,0,4)       (0,4,0,0)       (0,19,0,0)      -       ....    .+.+
-ATLCOD1Ac00036  242     A       (2,0,14,0)      (2,0,2,0)       (9,0,6,0)       -       ....    +.+.
+                                <-lib 1->    <-lib 2->     <-lib 3->              conf2   conf3  angle   Fst  PIk  dCI  Indels
+                                A  C G T      A C G T       A C G T               ACGT    ACGT   0.xxx  ..  
+ATLCOD1Ac00006  227     C       0 11 0 0      0 0 0 0       0 2 0 4       -       ....    .+.+
+ATLCOD1Ac00014  471     G       0 0 4 0       0 0 0 0       8 0 2 0       -       ....    +.+.
+ATLCOD1Ac00021  350     C       0 7 0 0       0 1 0 0       0 3 0 10      -       ....    .+.+
+ATLCOD1Ac00023  87      C       0 33 0 0      0 1 1 0       0 14 0 0      -       .++.    ....
+ATLCOD1Ac00027  101     G       8 0 1 0       0 0 0 0       0 0 3 0       -       ....    +.+.
+ATLCOD1Ac00027  314     T       1 0 0 9       0 0 0 0       6 0 0 2       -       ....    +..+
+ATLCOD1Ac00027  408     C       0 13 0 1      0 0 0 0       0 5 0 6       -       ....    .+.+
+ATLCOD1Ac00035  258     A       25 0 0 12     4 0 0 0       27 0 0 2      -       ....    +..+
+ATLCOD1Ac00036  171     C       0 8 0 4       0 4 0 0       0 19 0 0      -       ....    .+.+
+ATLCOD1Ac00036  242     A       2 0 14 0      2 0 2 0       9 0 6 0       -       ....    +.+.
 ~~~~~~
 
 Here we see that each library has had the allele frequencies counted
@@ -74,3 +74,13 @@ But the confidence intervals are
 Specifically I use Agresti-Coull's confidence interval approximation,
 which according to the same is a better way to do it than to calculate
 the binomials directly.
+
+## Further columns
+
+* Angle beween allele frequency spectra
+* $F_{ST}$ - the catch-all divergence metric
+* $\Pi_k$ - expected number of differences
+* dCI - the distance between major allele frequencies in terms of standard deviations
+* indels - any indels found are listed here, with counts per pool
+
+
