@@ -12,11 +12,14 @@ Description:   Using Agresti-Coull estimation of confidence interval, report
 	       the variant having different underlying allele frequency ('+' for 95%, 
 	       '*' for 99%).
 
--- Using IO arrays (baseline)
 Executable varan
     Hs-Source-Dirs:  src
     Main-Is:         Main.hs
     Other-Modules:   AgrestiCoull, MPileup, RandomSelect, Variants
     Build-Depends:   base >= 4 && < 5, random, mtl, parallel
-    Ghc-Options:     -rtsopts -Wall -threaded -with-rtsopts=-N
+    Ghc-Options:     -rtsopts -Wall 
+
+-- For parallel execution, we might want to add these, but they
+-- seem to degrade performance on older GHC
+-- Ghc-Options: -threaded -with-rtsopts=-N
 
