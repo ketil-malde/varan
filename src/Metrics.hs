@@ -1,9 +1,11 @@
+-- | Calculate various metrics/statistics
 module Metrics where
 
 import AgrestiCoull
 import MPileup (Counts(..), toList, sumList)
 
--- | similar to dist, but from 1 (equal) to 0 (orthogonal)
+-- | Calculate vector angle between allele frequencies.  This is 
+--   similar to `dist`, but from 1 (equal) to 0 (orthogonal)
 angle :: Counts -> Counts -> Double
 angle c1' c2' = let
   (c1,c2) = (toList c1', toList c2')
@@ -47,6 +49,7 @@ conf (C a1 c1 g1 t1 _v1) (C a2 c2 g2 t2 _v2) = let
      ,overlap (t1,s1-t1) (t2,s2-t2)
      ]
 
+-- | Helper function for conf
 overlap :: (Int,Int) -> (Int,Int) -> Char
 overlap (succ1,fail1) (succ2,fail2) =
   let (i1,j1) = confidenceInterval 1.65 succ1 fail1
@@ -57,7 +60,7 @@ overlap (succ1,fail1) (succ2,fail2) =
        in if k2>=l1 || k1>=l2 then '*' else '+'
      else '.'
 
--- calculate distance between approximate distributions
+-- | Calculate distance between approximate distributions
 -- in terms of their standard deviation.  Perhaps use binomial distribution directly?
 -- This is a z-score, i.e. score of 2 means that the 95% CIs barely overlap.
 ci_dist :: (Int,Int) -> (Int,Int) -> Double
@@ -70,7 +73,8 @@ ci_dist (s1,f1) (s2,f2) =
       sd2 = j2-i2
   in if sd1+sd2 == 0 then 0 else abs (mu2-mu1)/(sd1+sd2)
 
--- calculate distance (in absolute numbers) between confidence intervals
+-- | Calculate distance (in absolute numbers) between confidence intervals 
+--   with the given z-score
 delta_sigma :: Double -> (Int,Int) -> (Int,Int) -> Double
 delta_sigma z (s1,f1) (s2,f2) =
   let (i1,j1) = confidenceInterval 1.0 s1 f1
@@ -81,7 +85,7 @@ delta_sigma z (s1,f1) (s2,f2) =
       sd2 = j2-i2
   in abs (mu2-mu1) - z*(sd1+sd2)
 
--- significance of allele frequencies being different
+-- | Significance (chi²-score) of allele frequencies being different
 pearson_chi² :: [(Int,Int)] -> Double
 pearson_chi² sfs = let
   tots = map (\(x,y)->fromIntegral (x+y)) sfs
