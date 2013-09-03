@@ -25,6 +25,8 @@ showPile (chr,pos,ref,stats@(s1:ss)) = do
     ++printf "\t%.3f" (f_st (s1:ss))  -- print_pval (f,pf)
     ++printf "\t%.3f" (pi_k (s1:ss))  -- print_pval (p,pp)
     ++concat [printf "\t%.2f" (uncurry ci_dist $ major_allele s1 s) | s <- ss]
+    ++concat [printf "\t%.2f" (uncurry (delta_sigma 1) $ major_allele s1 s) | s <- ss]
+    ++concat [printf "\t%.2f" (uncurry (delta_sigma 2) $ major_allele s1 s) | s <- ss]
     ++"\t"++showV stats)
 
 -- pick out major allele in first count, and output number of same/different
@@ -127,6 +129,17 @@ ci_dist (s1,f1) (s2,f2) =
       sd1 = j1-i1
       sd2 = j2-i2
   in if sd1+sd2 == 0 then 0 else abs (mu2-mu1)/(sd1+sd2)
+
+-- calculate distance (in absolute numbers) between confidence intervals
+delta_sigma :: Double -> (Int,Int) -> (Int,Int) -> Double
+delta_sigma z (s1,f1) (s2,f2) =
+  let (i1,j1) = confidenceInterval 1.0 s1 f1
+      (i2,j2) = confidenceInterval 1.0 s2 f2
+      mu1 = i1+j1 -- all values are times two (so it cancels out)
+      mu2 = i2+j2
+      sd1 = j1-i1
+      sd2 = j2-i2
+  in abs (mu2-mu1) - z*(sd1+sd2)
 
 -- count major allele in first sample
 -- return chrom, pos, ref, 
