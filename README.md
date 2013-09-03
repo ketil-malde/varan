@@ -18,69 +18,70 @@ samtools mpileup -f ref.fasta sample1.bam sample2.bam sample3.bam | varan > OUT
 The output from `samtools pileup` looks something like this:
 
 ~~~~~~
-                                <---sample #1 -->       <--sample #2 --->       <--sample#3----->  
-   contig       pos    ref    #reads   char    qual   #reads .... etc
-ATLCOD1Ac00001  30      A       1       ^>.     @       0       *       *       0       *       *
-ATLCOD1Ac00001  31      C       1       .       @       0       *       *       0       *       *
-ATLCOD1Ac00001  32      A       1       .       @       0       *       *       0       *       *
-ATLCOD1Ac00001  33      C       1       .       D       0       *       *       0       *       *
-ATLCOD1Ac00001  34      A       1       .       F       0       *       *       0       *       *
-ATLCOD1Ac00001  35      C       1       .       D       0       *       *       0       *       *
-ATLCOD1Ac00001  36      A       1       .       D       0       *       *       0       *       *
-ATLCOD1Ac00001  37      C       1       .       D       0       *       *       0       *       *
-ATLCOD1Ac00001  38      A       1       .       B       0       *       *       0       *       *
-ATLCOD1Ac00001  39      C       1       .       A       0       *       *       0       *       *
+                                        [-- sample #1 -->               [-- sample #2 --->    
+   contig       pos    ref    #reads    char            qual            #reads .... etc
+LSalAtl2s1      6       A       12      ,,,,,,,,,,.,    ::::::::::::    8       ,,,,,,,,        ::::::::
+LSalAtl2s1      7       A       12      ,,,,,,,,,,.,    ::::::::::::    8       ,,,,,,,,        ::::::::
+LSalAtl2s1      8       A       12      ,,,,,,,,,,.,    ::::::::::::    9       ,,,,,,,,^F,     :::::::::
+LSalAtl2s1      9       A       12      ,,,,,,,,,,.,    ::::::::::::    9       ,,,,,,,,,       :::::::::
+LSalAtl2s1      10      T       13      ,,,,,,,,,,.,^F. :::::::::::::   9       ,,,,,,,,,       :::::::::
+LSalAtl2s1      11      C       13      ,,,,,,,,,,.,.   :::::::::::::   9       ,,,,,,,,,       :::::::::
+LSalAtl2s1      12      A       13      ,,,,,,,,,,.,.   :::::::::::::   9       ,,,,,,,,,       :::::::::
+LSalAtl2s1      13      T       13      ,,,,,,,,,,.,.   :::::::::::::   9       ,$,,,,,,,,      :::::::::
+LSalAtl2s1      14      C       13      ,$,,,,,,,,,.,.  :::::::::::::   8       ,,,,,,,,        ::::::::
+LSalAtl2s1      15      A       12      ,,,,,,,,,.,.    ::::::::::::    8       ,,,,,,,,        ::::::::
+LSalAtl2s1      16      T       12      ,,,,,,,,,.,.    ::::::::::::    8       ,,,,,,,,        ::::::::
+LSalAtl2s1      17      A       12      ,,,,,,,,,.,.    ::::::::::::    8       ,,,,,,,,        ::::::::
+LSalAtl2s1      18      A       12      ,,,,,,,,,.,.    ::::::::::::    8       ,,,,,,,,        ::::::::
+LSalAtl2s1      19      T       12      ,,,,,,,,,.,.    ::::::::::::    8       ,,,,,,,,        ::::::::
+LSalAtl2s1      20      A       12      ,,,,,,,,,.,.    ::::::::::::    8       ,,,,,,,,        ::::::::
 ~~~~~~
 
 ## Output
 
-After filtering this through `varan` (and `grep` as above,
-otherwise you'd see quite a larger number of lines), we should get
-something like:
+After filtering this through `varan` as above, you get
 
 ~~~~~~
-                                <-lib 1->    <-lib 2->     <-lib 3->              conf2   conf3  angle   Fst  PIk  dCI  Indels
-                                A  C G T      A C G T       A C G T               ACGT    ACGT   0.xxx  ..  
-ATLCOD1Ac00006  227     C       0 11 0 0      0 0 0 0       0 2 0 4       -       ....    .+.+
-ATLCOD1Ac00014  471     G       0 0 4 0       0 0 0 0       8 0 2 0       -       ....    +.+.
-ATLCOD1Ac00021  350     C       0 7 0 0       0 1 0 0       0 3 0 10      -       ....    .+.+
-ATLCOD1Ac00023  87      C       0 33 0 0      0 1 1 0       0 14 0 0      -       .++.    ....
-ATLCOD1Ac00027  101     G       8 0 1 0       0 0 0 0       0 0 3 0       -       ....    +.+.
-ATLCOD1Ac00027  314     T       1 0 0 9       0 0 0 0       6 0 0 2       -       ....    +..+
-ATLCOD1Ac00027  408     C       0 13 0 1      0 0 0 0       0 5 0 6       -       ....    .+.+
-ATLCOD1Ac00035  258     A       25 0 0 12     4 0 0 0       27 0 0 2      -       ....    +..+
-ATLCOD1Ac00036  171     C       0 8 0 4       0 4 0 0       0 19 0 0      -       ....    .+.+
-ATLCOD1Ac00036  242     A       2 0 14 0      2 0 2 0       9 0 6 0       -       ....    +.+.
-~~~~~~
-
-Here we see that each library has had the allele frequencies counted
-up, and the tuples number As, Cs, Gs, and Ts for each position.  The
-final columns compare the samples to sample number 1, and a `+`
-indicates that the 95% confidence intervals for that allele's
-frequency don't overlap, a `*` is the same, but for 99% confidence.
-
-So in position 227 in contig 6 we see a significant difference
-in allele frequency for `C` and `T`.  This is a bit surprising, since
-`C` is the major allele (in fact the only one) in the first sample.
-But the confidence intervals are
+                                 <-lib 1->       <-lib 2->              conf    angle   Fst  PIk  dCI  Indels
+                                 A  C G T        A  C G T               ACGT    
+LSalAtl2s1      153     A        18 0 0 0        20 0 0 0       -       ....    1.000   0.000   0.000   0.04    []              
+LSalAtl2s1      154     T        0 0 0 17        0 0 0 20       -       ....    1.000   0.000   0.000   0.06    []              
+LSalAtl2s1      155     A        17 0 0 0        20 0 0 0       -       ....    1.000   0.000   0.000   0.06    []              
+LSalAtl2s1      156     T        0 0 0 17        0 0 0 20       -       ....    1.000   0.000   0.000   0.06    []              
+LSalAtl2s1      157     A        16 0 0 0        20 0 0 0       -       ....    1.000   0.000   0.000   0.08    []              
+LSalAtl2s1      158     C        1 15 0 0        10 10 0 0      -       ++..    0.753   0.223   0.500   2.31    []              
+LSalAtl2s1      159     A        14 2 0 0        19 1 0 0       -       ....    0.996   0.018   0.163   0.53    []              
+LSalAtl2s1      160     A        17 0 0 0        20 0 0 0       -       ....    1.000   0.000   0.000   0.06    []              
+LSalAtl2s1      161     T        0 0 0 18        0 0 0 20       -       ....    1.000   0.000   0.000   0.04    []              
+LSalAtl2s1      162     T        0 0 0 18        0 0 0 19       -       ....    1.000   0.000   0.000   0.02    []              
+LSalAtl2s1      163     G        0 0 18 0        0 0 19 0       -       ....    1.000   0.000   0.000   0.02    []              
 
 ~~~~~~
-> confidenceInterval 1.65 11 0           -- 11 "successful" observasjoner, no "failures"
-(0.7676537322704904,1.0339494741423352)  -- 95% interval above 0.76
-> confidenceInterval 1.65 2 4            -- 2 "successes", 4 "failures"
-(0.11345603146594596,0.657251907771658)  -- 95% interval less than 0.66
-~~~~~~
 
+Here we see that each input library (i.e. BAM file) has had the allele frequencies counted
+up as the number of As, Cs, Gs, and Ts for each position.  Note that a
+space is used to separate these, while TAB is used between the columns
+proper.  
+
+The `conf` column for position 158 displays a `+` 
+indicating that the 95% confidence intervals for that allele's
+frequency don't overlap, a `*` would indicate 99% confidence.  It is
+perhaps useful to `grep` on this column to select a subset of the
+output.
+
+Then follows the angle between allele frequency spectra, the $F_ST$,
+$\pi_k$, and $\Delta_{CI}$, the latter is the distance between
+the confidence intervals measured in standard deviations. 
 Specifically I use Agresti-Coull's confidence interval approximation,
-which according to the same is a better way to do it than to calculate
-the binomials directly.
+which according to Agresti and Coull is a better way to do it than to
+calculate the binomials directly.
 
-## Further columns
+The final column lists indels and their counts, if any.
 
-* Angle beween allele frequency spectra
-* $F_{ST}$ - the catch-all divergence metric
-* $\Pi_k$ - expected number of differences
-* dCI - the distance between major allele frequencies in terms of standard deviations
-* indels - any indels found are listed here, with counts per pool
+# Examining specific regions
 
+It is also easy to extract a specific region (e.g. a specific gene)
+through `samtools`, if you index the fasta-file first.  For instance:
+
+    samtools mpileup -f ref.fasta -r CHR8:4500-6000 sample1.bam sample2.bam | varan > out
 
