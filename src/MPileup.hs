@@ -17,9 +17,10 @@ showPile (chr,pos,ref,stats@(s1:ss)) = do
   let (f,pf) = pval g f_st (s1:ss)
       (p,pp) = pval g pi_k (s1:ss)
   pf `par` pp `pseq` -}
+  let cnts = map showC stats
   return (
-    chr++"\t"++pos++"\t"++[ref] ++concat ["\t"++showC s | s <- stats]
-    ++"\t-"++concat ["\t"++conf s1 s | s <- ss] 
+    chr++"\t"++pos++"\t"++[ref]++concat ["\t"++s | s <- map fst cnts]++"\t"++show (sum $ map snd cnts)
+    ++concat ["\t"++conf s1 s | s <- ss]
     --  ++ conf_all (s1:ss)
     ++concat [printf "\t%.3f" (angle s1 s) | s <- ss]
     ++printf "\t%.3f" (f_st (s1:ss))  -- print_pval (f,pf)
@@ -165,9 +166,9 @@ readPile = map (parse1 . words) . lines
               v -> (C as cs gs ts (v:vs))
 
 
--- | Show SNP counts
-showC :: Counts -> String
-showC (C as cs gs ts _) = " "++(intercalate " " $ map show [as,cs,gs,ts])++" "
+-- | Show SNP counts and coverage
+showC :: Counts -> (String,Int)
+showC (C as cs gs ts _) = (" "++(intercalate ":" $ map show [as,cs,gs,ts]),as+cs+gs+ts)
 
 -- | Show structural variant count
 showV :: [Counts] -> String
