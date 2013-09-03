@@ -142,6 +142,16 @@ delta_sigma z (s1,f1) (s2,f2) =
       sd2 = j2-i2
   in abs (mu2-mu1) - z*(sd1+sd2)
 
+-- significance of allele frequencies being different
+pearson_chi² :: [(Int,Int)] -> Double
+pearson_chi² sfs = let
+  tots = map (\(x,y)->fromIntegral (x+y)) sfs
+  s = sum tots
+  freqs = map (\x -> x/s) tots
+  es = zipWith (*) tots freqs
+  in sum [(x-e)*(x-e)/e | (x,e) <- zip (map (fromIntegral . fst) sfs) es]
+-- Equivalent: sum (x^2/e) - s ?
+
 -- count major allele in first sample
 -- return chrom, pos, ref, 
 readPile :: String -> [(String,String,Char,[Counts])]
