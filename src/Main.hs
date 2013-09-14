@@ -2,7 +2,7 @@ module Main where
 
 import System.Environment (getArgs)
 import MPileup (Counts, readPile, showC, showV, major_allele) 
-import Metrics(angle, f_st, pi_k, conf, ci_dist, delta_sigma)
+import Metrics(angle, f_st, pi_k, conf, ci_dist, delta_sigma, pearson_chi²)
 import Text.Printf
 {-
 import RandomSelect
@@ -43,6 +43,7 @@ showPile (chr,pos,ref,stats@(s1:ss)) = do
     ++printf "\t%.3f" (f_st (s1:ss))  -- print_pval (f,pf)
     ++printf "\t%.3f" (pi_k (s1:ss))  -- print_pval (p,pp)
     ++concat [printf "\t%.2f" (uncurry ci_dist $ major_allele s1 s) | s <- ss]
+    ++let as = [major_allele s1 s | s <- ss] in printf "\t%.2f" (pearson_chi² (fst (head as):map snd as))
     ++concat [printf "\t%.2f" (uncurry (delta_sigma 1) $ major_allele s1 s) | s <- ss]
     ++concat [printf "\t%.2f" (uncurry (delta_sigma 2) $ major_allele s1 s) | s <- ss]
     ++"\t"++showV stats)
