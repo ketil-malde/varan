@@ -3,6 +3,8 @@ module Metrics where
 
 import AgrestiCoull
 import MPileup (Counts(..), toList, sumList)
+import Statistics.Distribution
+import Statistics.Distribution.ChiSquared
 
 -- | Calculate vector angle between allele frequencies.  This is 
 --   similar to `dist`, but from 1 (equal) to 0 (orthogonal)
@@ -85,15 +87,16 @@ delta_sigma z (s1,f1) (s2,f2) =
       sd2 = j2-i2
   in abs (mu2-mu1) - z*(sd1+sd2)
 
--- | Significance (chi²-score) of allele frequencies being different
-pearson_chi² :: [(Int,Int)] -> Double
-pearson_chi² sfs = let
-  tots = map (\(x,y)->fromIntegral (x+y)) sfs
-  s = sum tots
-  freqs = map (\x -> x/s) tots
-  es = zipWith (*) tots freqs
-  in sum [(x-e)*(x-e)/e | (x,e) <- zip (map (fromIntegral . fst) sfs) es]
--- Equivalent: sum (x^2/e) - s ?
+-- should probably include a warning if more than 20% of cells < 5 expected or some such
+pearsons_chi² :: [[Int]] -> Double
+pearsons_chi² t = let
+  cols   = map sum
+  rows x = if all null x then []
+           else sum (map head x) : rows (map tail x)
+  exps   = [[ fromIntegral (r*c) / fromIntegral (sum $ rows t) | r <- rows t] | c <- cols t ]
+  chi    = sum [ (fromIntegral a-b)^(2::Int)/b | (a,b) <- zip (concat t) (concat exps) ]
+  df     = (length t-1)*(length (head t) - 1)
+  in if any (==0) (cols t) || any (==0) (rows t) then 1.0 else complCumulative (chiSquared df) chi
 
 {-
 -- | calcuate normalized vector distance between frequency counts
@@ -105,17 +108,15 @@ dist c1 c2 = let
   in vnorm $ [ x/d1-y/d2 | (x,y) <- zip (toList c1) (toList c2)]
 -}
 
-
-{-
 -- | Use AgrestiCoull to calculate significant difference from
 --   a combined distribution, with error:
 conf_all :: [Counts] -> String
 conf_all cs' = let
   cs = map toList cs' :: [[Double]]
   [a,c,g,t] = map round  $ sumList cs -- add error!
-  p = id -- pseudo 1 30
-  in concat ["\t"++x | x <- map (conf (p $ C a c g t [])) cs']
+  in concat ["\t"++x | x <- map (conf (C a c g t [])) cs']
 
+{-
 pseudo :: Int -> Int ->Counts -> Counts
 pseudo tr err (C a c g t vs) =
   let s = tr + (a+c+g+t) `div` err

@@ -1,9 +1,17 @@
-module MPileup (Counts(..), readPile, toList, major_allele, showC, showV, sumList) where
+module MPileup (Counts(..), readPile, toList, major_allele, by_major_allele, showC, showV, sumList) where
 
 import Data.Char (toUpper)
 import Data.List (foldl',intercalate,nub,elemIndex)
 
 import Variants
+
+-- convert counts to major/non-major allele counts
+by_major_allele :: [Counts] -> [[Int]] -- always length 2
+by_major_allele cs = let
+  ls = map toList cs
+  s  = sumList ls
+  Just i = elemIndex (maximum s) s
+  in map (\l -> [l!!i,sum l-l!!i]) ls
 
 -- pick out major allele in first count, and output number of same/different
 major_allele :: Counts -> Counts -> ((Int,Int),(Int,Int))

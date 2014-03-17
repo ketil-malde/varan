@@ -1,3 +1,5 @@
+-- Calculates p-values using a permutation test (not currently used)
+
 module RandomSelect where
 
 import System.Random
