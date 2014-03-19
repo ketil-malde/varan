@@ -24,7 +24,8 @@ gen_header o (_,_,_,_,cs) = putStrLn $ concat [
   ,if Options.f_st o then "\tF_st" else ""
   ,if Options.pi_k o then "\tPi_k" else ""
   ,if Options.chi2 o then "\tChi²" else ""
-  ,if Options.conf o then "\tAG-CI" else ""
+  ,if Options.conf o then concat ["\tCI "++show n | n <- [1..(length cs)]] else ""
+  ,if Options.variants o then "\tVariants" else ""
   ]
   where
     standard = "#Target seq.\tpos\tref"++concat ["\tsample "++show x | x <- [1..(length cs)]]++"\tcover"
@@ -37,7 +38,7 @@ showPile o inp@(f,_,_,_,counts) = if suppress o && f then "" else concat [
           , if Options.pi_k o then printf "\t%.3f" (Metrics.pi_k counts) else ""
           , if Options.chi2 o then printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele counts) else ""
           , if Options.conf o then conf_all counts else ""  
-          -- , if Options.ds o   then ?
+          , if Options.variants o then ("\t"++showV counts) else ""
           ,"\n" 
           ]
 
