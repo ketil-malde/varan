@@ -1,4 +1,4 @@
-module MPileup (Counts(..), readPile, toList, major_allele, by_major_allele, showC, showV, sumList) where
+module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, showC, showV, sumList) where
 
 import Data.Char (toUpper)
 import Data.List (foldl',intercalate,nub,elemIndex)
@@ -24,8 +24,8 @@ major_allele (C a b c d _) (C e f g h _) =
 
 -- count major allele in first sample
 -- return flag whether informative, chrom, pos, ref, 
-readPile :: String -> [(Bool,String,String,Char,[Counts])]
-readPile = map (parse1 . words) . lines
+readPile1 :: String -> (Bool,String,String,Char,[Counts])
+readPile1 = parse1 . words
   where
     parse1 (chr:pos:(ref:_):rest) = let trs = map snd $ triples ref rest
                                     in (check trs, chr,pos,ref,map count trs)

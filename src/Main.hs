@@ -1,6 +1,6 @@
 module Main where
 
-import MPileup (Counts, readPile, showC, showV, by_major_allele)
+import MPileup (Counts, readPile1, showC, showV, by_major_allele)
 import Metrics(f_st, pi_k, conf_all, ci_dist, delta_sigma, pearsons_chi²)
 import Text.Printf
 import Options
@@ -13,9 +13,12 @@ import System.Random
 main :: IO ()
 main = do
   o <- Options.getArgs
-  ls <-  readPile `fmap` if null (input o) then getContents else readFile (input o)
-  gen_header o (head ls)
-  mapM_ (putStr . showPile o) ls
+  lns <- lines `fmap` if null (input o) then getContents else readFile (input o)
+  case lns of 
+    [] -> error "No lines in input!"
+    (l:ls) -> do 
+      gen_header o (readPile1 l)
+      mapM_ (putStr . showPile o . readPile1) (l:ls)
 
 -- generate the appropriate header, based on number of input pools
 gen_header :: Options -> (Bool,String,String,Char,[Counts]) -> IO ()
