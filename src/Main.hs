@@ -15,11 +15,11 @@ main = do
   o <- Options.getArgs
   ls <-  readPile `fmap` if null (input o) then getContents else readFile (input o)
   gen_header o (head ls)
-  mapM_ (putStrLn . showPile o) ls
+  mapM_ (putStr . showPile o) ls
 
 -- generate the appropriate header, based on number of input pools
-gen_header :: Options -> (String,String,Char,[Counts]) -> IO ()
-gen_header o (_,_,_,cs) = putStrLn $ concat [
+gen_header :: Options -> (Bool,String,String,Char,[Counts]) -> IO ()
+gen_header o (_,_,_,_,cs) = putStrLn $ concat [
   standard
   ,if Options.f_st o then "\tF_st" else ""
   ,if Options.pi_k o then "\tPi_k" else ""
@@ -29,18 +29,20 @@ gen_header o (_,_,_,cs) = putStrLn $ concat [
   where
     standard = "#Target seq.\tpos\tref"++concat ["\tsample "++show x | x <- [1..(length cs)]]++"\tcover"
 
-showPile :: Options -> (String,String,Char,[Counts]) -> String
-showPile _ (_,_,_,[]) = error "Pileup with no data?"
-showPile o inp@(_,_,_,counts) = concat [
-  default_out inp
-  , if Options.f_st o then printf "\t%.3f" (Metrics.f_st counts) else ""
-  , if Options.pi_k o then printf "\t%.3f" (Metrics.pi_k counts) else ""
-  , if Options.chi2 o then printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele counts) else ""
-  , if Options.conf o then conf_all counts else ""  
-  ]
+showPile :: Options -> (Bool,String,String,Char,[Counts]) -> String
+showPile _ (_,_,_,_,[]) = error "Pileup with no data?"
+showPile o inp@(f,_,_,_,counts) = if suppress o && f then "" else concat [
+          default_out inp
+          , if Options.f_st o then printf "\t%.3f" (Metrics.f_st counts) else ""
+          , if Options.pi_k o then printf "\t%.3f" (Metrics.pi_k counts) else ""
+          , if Options.chi2 o then printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele counts) else ""
+          , if Options.conf o then conf_all counts else ""  
+          -- , if Options.ds o   then ?
+          ,"\n" 
+          ]
 
-default_out :: (String, String, Char, [Counts]) -> String
-default_out (chr,pos,ref,stats) = 
+default_out :: (Bool,String, String, Char, [Counts]) -> String
+default_out (_,chr,pos,ref,stats) = 
   chr++"\t"++pos++"\t"++[ref]++concat ["\t"++s | s <- map fst cnts]++"\t"++show (sum $ map snd cnts) -- todo: add indels?
   where cnts = map showC stats
 

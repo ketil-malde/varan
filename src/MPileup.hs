@@ -23,13 +23,16 @@ major_allele (C a b c d _) (C e f g h _) =
   in ((m, sum s1-m),(s2!!i,sum [s2!!j | j <- [0..3], j /= i]))
 
 -- count major allele in first sample
--- return chrom, pos, ref, 
-readPile :: String -> [(String,String,Char,[Counts])]
+-- return flag whether informative, chrom, pos, ref, 
+readPile :: String -> [(Bool,String,String,Char,[Counts])]
 readPile = map (parse1 . words) . lines
   where
-    parse1 (chr:pos:(ref:_):rest) = (chr,pos,ref,map (count . snd) $ triples ref rest)
+    parse1 (chr:pos:(ref:_):rest) = let trs = map snd $ triples ref rest
+                                    in (check trs, chr,pos,ref,map count trs)
     parse1 xs = error ("parse1: insufficiently long line:"++show xs)
     
+    check ts = let t = concat ts in null t || all (==head t) t
+
     triples _ [] = []
     triples ref (cnt:bases:_quals:rest) = (cnt,parse ref $ map toUpper bases) : triples ref rest
     triples _ _ = error "triples: incorrect number of columns"
