@@ -113,8 +113,11 @@ dist c1 c2 = let
 conf_all :: [Counts] -> String
 conf_all cs' = let
   cs = map toList cs' :: [[Double]]
-  [a,c,g,t] = map round  $ sumList cs -- add error!
-  in concat ["\t"++x | x <- map (conf (C a c g t [])) cs']
+  [a,c,g,t] = map round  $ sumList cs
+  -- attempt to smooth errors by subtracting one, seems to work
+  m x = max (x-1) 0
+  rm_err (C aa cc gg tt _) = (C (m aa) (m cc) (m gg) (m tt) [])
+  in concat ["\t"++x | x <- map (conf (C a c g t []) . rm_err) cs']
 
 {-
 pseudo :: Int -> Int ->Counts -> Counts
