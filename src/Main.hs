@@ -10,16 +10,18 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 main :: IO ()
 main = do
   o <- Options.getArgs
-  lns <- BL.lines `fmap` if null (input o) then BL.getContents else BL.readFile (input o)
+  lns <- BL.lines `fmap` if null (input o) then error "Specify '-' to read from stdin\n(or use --help for help)."
+                         else if input o == "-" then BL.getContents 
+                              else BL.readFile (input o)
+  let outf = if null (output o) || output o == "-" then BL.putStr else BL.writeFile (output o)
   case lns of 
     [] -> error "No lines in input!"
-    (l:ls) -> do 
-      gen_header o (readPile1 l)
-      mapM_ BL.putStr $ map (showPile o . readPile1) (l:ls)
+    (l:ls) -> let hdr = gen_header o (readPile1 l)
+              in hdr `seq` mapM_ outf $ hdr : map (showPile o . readPile1) (l:ls)
 
 -- generate the appropriate header, based on number of input pools
-gen_header :: Options -> MPileRecord -> IO ()
-gen_header o (_,_,_,_,cs) = putStrLn $ concat [
+gen_header :: Options -> MPileRecord -> BL.ByteString
+gen_header o (_,_,_,_,cs) = BL.pack $ concat [
   standard
   ,if Options.f_st o then "\tF_st" else ""
   ,if Options.pi_k o then "\tPi_k" else ""
