@@ -16,7 +16,7 @@ Executable varan
     Hs-Source-Dirs:  src
     Main-Is:         Main.hs
     Other-Modules:   AgrestiCoull, MPileup, RandomSelect, Variants, Metrics, Options
-    Build-Depends:   base >= 4 && < 5, random, mtl, parallel, statistics, cmdargs
+    Build-Depends:   base >= 4 && < 5, random, mtl, parallel, statistics, cmdargs, bytestring
     Ghc-Options:     -rtsopts -Wall 
 
 -- For parallel execution, we might want to add these, but they

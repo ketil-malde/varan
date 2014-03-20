@@ -1,27 +1,24 @@
 module Main where
 
-import MPileup (Counts, readPile1, showC, showV, by_major_allele)
-import Metrics(f_st, pi_k, conf_all, ci_dist, delta_sigma, pearsons_chi²)
+import MPileup (readPile1, showC, showV, by_major_allele, MPileRecord)
+import Metrics(f_st, pi_k, conf_all, pearsons_chi²)
 import Text.Printf
 import Options
-
-{-
-import RandomSelect
-import System.Random
--}
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as BL
 
 main :: IO ()
 main = do
   o <- Options.getArgs
-  lns <- lines `fmap` if null (input o) then getContents else readFile (input o)
+  lns <- BL.lines `fmap` if null (input o) then BL.getContents else BL.readFile (input o)
   case lns of 
     [] -> error "No lines in input!"
     (l:ls) -> do 
       gen_header o (readPile1 l)
-      mapM_ (putStr . showPile o . readPile1) (l:ls)
+      mapM_ BL.putStr $ map (showPile o . readPile1) (l:ls)
 
 -- generate the appropriate header, based on number of input pools
-gen_header :: Options -> (Bool,String,String,Char,[Counts]) -> IO ()
+gen_header :: Options -> MPileRecord -> IO ()
 gen_header o (_,_,_,_,cs) = putStrLn $ concat [
   standard
   ,if Options.f_st o then "\tF_st" else ""
@@ -33,22 +30,26 @@ gen_header o (_,_,_,_,cs) = putStrLn $ concat [
   where
     standard = "#Target seq.\tpos\tref"++concat ["\tsample "++show x | x <- [1..(length cs)]]++"\tcover"
 
-showPile :: Options -> (Bool,String,String,Char,[Counts]) -> String
+showPile :: Options -> MPileRecord -> BL.ByteString
 showPile _ (_,_,_,_,[]) = error "Pileup with no data?"
-showPile o inp@(f,_,_,_,counts) = if suppress o && f then "" else concat [
-          default_out inp
-          , if Options.f_st o then printf "\t%.3f" (Metrics.f_st counts) else ""
-          , if Options.pi_k o then printf "\t%.3f" (Metrics.pi_k counts) else ""
-          , if Options.chi2 o then printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele counts) else ""
-          , if Options.conf o then conf_all counts else ""  
-          , if Options.variants o then ("\t"++showV counts) else ""
-          ,"\n" 
-          ]
-
-default_out :: (Bool,String, String, Char, [Counts]) -> String
+showPile o inp@(f,_,_,_,counts) = if suppress o && f then BL.empty 
+                                  else BL.append (default_out inp) (BL.fromChunks 
+          [ when (Options.f_st o) (printf "\t%.3f" (Metrics.f_st counts))
+          , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k counts))
+          , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele counts))
+          , when (Options.conf o) (conf_all counts)
+          , when (Options.variants o) ("\t"++showV counts)
+          , B.pack "\n"
+          ])
+  where when p s = if p then B.pack s else B.empty
+        
+default_out :: MPileRecord -> BL.ByteString
 default_out (_,chr,pos,ref,stats) = 
-  chr++"\t"++pos++"\t"++[ref]++concat ["\t"++s | s <- map fst cnts]++"\t"++show (sum $ map snd cnts) -- todo: add indels?
-  where cnts = map showC stats
+  BL.concat ([chr,tab,pos,tab,BL.singleton ref]++samples++counts)
+    where cnts = map showC stats
+          tab  = BL.pack "\t"
+          samples = [BL.append tab (BL.pack s) | s <- map fst cnts]
+          counts  = [tab,BL.pack $ show $ sum $ map snd cnts] -- todo: add indels?
 
 {-  Confidence intervals?   
     ++concat ["\t"++conf s1 s | s <- ss]

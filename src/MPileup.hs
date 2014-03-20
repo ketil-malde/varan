@@ -1,9 +1,12 @@
-module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, showC, showV, sumList) where
+module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, showC, showV, sumList, MPileRecord) where
 
-import Data.Char (toUpper)
+import Data.Char (toUpper, isDigit)
 import Data.List (foldl',intercalate,nub,elemIndex)
+import qualified Data.ByteString.Lazy.Char8 as B
 
-import Variants
+import Variants hiding (parse)
+
+type MPileRecord = (Bool,B.ByteString,B.ByteString,Char,[Counts])
 
 -- convert counts to major/non-major allele counts
 by_major_allele :: [Counts] -> [[Int]] -- always length 2
@@ -24,19 +27,36 @@ major_allele (C a b c d _) (C e f g h _) =
 
 -- count major allele in first sample
 -- return flag whether informative, chrom, pos, ref, 
-readPile1 :: String -> (Bool,String,String,Char,[Counts])
-readPile1 = parse1 . words
+readPile1 :: B.ByteString -> MPileRecord 
+readPile1 = parse1 . B.words
   where
-    parse1 (chr:pos:(ref:_):rest) = let trs = map snd $ triples ref rest
-                                    in (check trs, chr,pos,ref,map count trs)
+    parse1 (chr:pos:r:rest) = let trs = triples ref rest
+                                  ref = B.head r
+                              in (check trs, chr, pos, ref, map count trs)
     parse1 xs = error ("parse1: insufficiently long line:"++show xs)
     
     check ts = let t = concat ts in null t || all (==head t) t
 
     triples _ [] = []
-    triples ref (cnt:bases:_quals:rest) = (cnt,parse ref $ map toUpper bases) : triples ref rest
+    triples ref (_cnt:bases:_quals:rest) = parse ref (B.map toUpper bases) : triples ref rest
     triples _ _ = error "triples: incorrect number of columns"
     
+    -- this could probalby be faster if counting was incorporated directly, 
+    -- avoiding the intermediate [Variant] data structure
+    parse :: Char -> B.ByteString -> [Variant]
+    parse ref bs = case B.uncons bs of
+      Nothing -> []
+      Just (c_,str_) -> p c_ str_
+        where p c str 
+                | c == '^'             = parse ref $ B.drop 1 str
+                | c == '*' || c == '$' = parse ref str                               
+                | c == '.' || c == ',' = Nuc ref : parse ref str
+                | c == '-' || c == '+' = let (x,rest) = B.span isDigit str
+                                             Just (cnt,_) = B.readInt x
+                                         in (if c=='+' then Ins else Del) (B.unpack $ B.take (fromIntegral cnt) rest) 
+                                            : parse ref (B.drop (fromIntegral cnt) rest)
+                | otherwise            = Nuc c : parse ref str
+
     count :: [Variant] -> Counts
     count = foldl' f (C 0 0 0 0 [])
       where f (C as cs gs ts vs) x = case x of
