@@ -6,11 +6,15 @@ import Text.Printf
 import Options
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
+import System.IO
 
 main :: IO ()
 main = do
   o <- Options.getArgs
-  lns <- BL.lines `fmap` if null (input o) then error "Specify '-' to read from stdin\n(or use --help for help)."
+  interactive <- hIsTerminalDevice stdin
+  lns <- BL.lines `fmap` if null (input o) then 
+                           if interactive then error "Cowardly refusing to read input from terminal.\nIf you really want this, specify '-' as input.\n(or use --help for help)."
+                           else BL.getContents
                          else if input o == "-" then BL.getContents 
                               else BL.readFile (input o)
   let outf = if null (output o) || output o == "-" then BL.putStr else BL.writeFile (output o)
