@@ -7,6 +7,7 @@ import Options
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import System.IO
+import ParMap
 
 main :: IO ()
 main = do
@@ -17,30 +18,33 @@ main = do
                            else BL.getContents
                          else if input o == "-" then BL.getContents 
                               else BL.readFile (input o)
-  let outf = if null (output o) || output o == "-" then BL.putStr else BL.writeFile (output o)
+  outh <- if null (output o) || output o == "-" then return stdout else openFile (output o) WriteMode
   case lns of 
     [] -> error "No lines in input!"
     (l:ls) -> let hdr = gen_header o (readPile1 l)
-              in hdr `seq` mapM_ outf $ hdr : map (showPile o . readPile1) (l:ls)
+              in do B.hPutStr outh hdr 
+                    mapM_ (B.hPutStr outh) =<< parMap (showPile o . readPile1) (l:ls)
+  hClose outh
 
 -- generate the appropriate header, based on number of input pools
-gen_header :: Options -> MPileRecord -> BL.ByteString
-gen_header o (_,_,_,_,cs) = BL.pack $ concat [
+gen_header :: Options -> MPileRecord -> B.ByteString
+gen_header o (_,_,_,_,cs) = B.pack $ concat [
   standard
   ,if Options.f_st o then "\tF_st" else ""
   ,if Options.pi_k o then "\tPi_k" else ""
   ,if Options.chi2 o then "\tChi²" else ""
   ,if Options.conf o then concat ["\tCI "++show n | n <- [1..(length cs)]] else ""
   ,if Options.variants o then "\tVariants" else ""
+  ,"\n"  
   ]
   where
     standard = "#Target seq.\tpos\tref"++concat ["\tsample "++show x | x <- [1..(length cs)]]++"\tcover"
 
-showPile :: Options -> MPileRecord -> BL.ByteString
+showPile :: Options -> MPileRecord -> B.ByteString
 showPile _ (_,_,_,_,[]) = error "Pileup with no data?"
-showPile o inp@(f,_,_,_,counts) = if suppress o && f then BL.empty 
-                                  else BL.append (default_out inp) (BL.fromChunks 
-          [ when (Options.f_st o) (printf "\t%.3f" (Metrics.f_st counts))
+showPile o inp@(f,_,_,_,counts) = if suppress o && f then B.empty else (B.concat
+          [ default_out inp
+          , when (Options.f_st o) (printf "\t%.3f" (Metrics.f_st counts))
           , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k counts))
           , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele counts))
           , when (Options.conf o) (conf_all counts)
@@ -49,13 +53,15 @@ showPile o inp@(f,_,_,_,counts) = if suppress o && f then BL.empty
           ])
   where when p s = if p then B.pack s else B.empty
         
-default_out :: MPileRecord -> BL.ByteString
+default_out :: MPileRecord -> B.ByteString
 default_out (_,chr,pos,ref,stats) = 
-  BL.concat ([chr,tab,pos,tab,BL.singleton ref]++samples++counts)
+  B.concat ([chr',tab,pos',tab,B.singleton ref]++samples++counts)
     where cnts = map showC stats
-          tab  = BL.pack "\t"
-          samples = [BL.append tab (BL.pack s) | s <- map fst cnts]
-          counts  = [tab,BL.pack $ show $ sum $ map snd cnts] -- todo: add indels?
+          tab  = B.pack "\t"
+          samples = [B.append tab (B.pack s) | s <- map fst cnts]
+          counts  = [tab,B.pack $ show $ sum $ map snd cnts] -- todo: add indels?
+          chr' = B.concat (BL.toChunks chr)
+          pos' = B.concat (BL.toChunks pos)
 
 {-  Confidence intervals?   
     ++concat ["\t"++conf s1 s | s <- ss]
