@@ -51,21 +51,20 @@ readPile1 = parse1 . B.words
                 | c == '^'             = parse ref $ B.drop 1 str
                 | c == '*' || c == '$' = parse ref str                               
                 | c == '.' || c == ',' = Nuc ref : parse ref str
-                | c == '-' || c == '+' = let (x,rest) = B.span isDigit str
-                                             Just (cnt,_) = B.readInt x
+                | c == '-' || c == '+' = let Just (cnt,rest) = B.readInt str
                                          in (if c=='+' then Ins else Del) (B.unpack $ B.take (fromIntegral cnt) rest) 
                                             : parse ref (B.drop (fromIntegral cnt) rest)
                 | otherwise            = Nuc c : parse ref str
 
     count :: [Variant] -> Counts
-    count = foldl' f (C 0 0 0 0 [])
+    count vars = foldl' f (C 0 0 0 0 []) vars
       where f (C as cs gs ts vs) x = case x of
               Nuc 'A' -> (C (as+1) cs gs ts vs)
               Nuc 'C' -> (C as (cs+1) gs ts vs)
               Nuc 'G' -> (C as cs (gs+1) ts vs)
               Nuc 'T' -> (C as cs gs (ts+1) vs)
               Nuc 'N' -> (C as cs gs ts vs)
-              Nuc _   -> error ("Not a nucleotide: "++show x)
+              Nuc _   -> error ("Not a nucleotide: "++show x++"\n"++show vars)
               v -> (C as cs gs ts (v:vs))
 
 
