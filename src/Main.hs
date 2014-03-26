@@ -1,7 +1,7 @@
 module Main where
 
 import MPileup (readPile1, showC, showV, by_major_allele, MPileRecord)
-import Metrics(f_st, pi_k, conf_all, pearsons_chi²)
+import Metrics(f_st, pi_k, conf_all, pearsons_chi², ds_all)
 import Text.Printf
 import Options
 import qualified Data.ByteString.Char8 as B
@@ -48,6 +48,7 @@ showPile o inp@(f,_,_,_,counts) = if suppress o && f then B.empty else (B.concat
           , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k counts))
           , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele counts))
           , when (Options.conf o) (conf_all counts)
+          , when (Options.ds o) ("\t"++(unwords $ map (printf "%.2f") $ ds_all 1 $ by_major_allele counts))
           , when (Options.variants o) ("\t"++showV counts)
           , B.pack "\n"
           ])
@@ -62,27 +63,4 @@ default_out (_,chr,pos,ref,stats) =
           counts  = [tab,B.pack $ show $ sum $ map snd cnts] -- todo: add indels?
           chr' = B.concat (BL.toChunks chr)
           pos' = B.concat (BL.toChunks pos)
-
-{-  Confidence intervals?   
-    ++concat ["\t"++conf s1 s | s <- ss]
-    --  ++ conf_all (s1:ss)
--}
-    
-{- angle - not so useful, I think?
-  ++concat [printf "\t%.3f" (angle s1 s) | s <- ss]
--}
-
-{-
-    ++concat [printf "\t%.2f" (uncurry ci_dist $ major_allele s1 s) | s <- ss]
--}
-    
-{-  ++concat [printf "\t%.2f" (uncurry (delta_sigma 1) $ major_allele s1 s) | s <- ss]
-    ++concat [printf "\t%.2f" (uncurry (delta_sigma 2) $ major_allele s1 s) | s <- ss]
-    ++"\t"++showV stats
--}
-
-{-
-print_pval :: (Double, Double) -> String
-print_pval (a,b) = printf "\t%.3f p=%.3f" a b
--}
 

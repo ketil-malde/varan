@@ -87,6 +87,13 @@ delta_sigma z (s1,f1) (s2,f2) =
       sd2 = j2-i2
   in abs (mu2-mu1) - z*(sd1+sd2)
 
+-- use on output from by_major_allele
+ds_all :: Double -> [[Int]] -> [Double]
+ds_all sig xs = let
+  (bs,bf) = (sum (map head xs), sum (map last xs))
+  pairs = [((s,f),(bs-s,bf-f)) | [s,f] <- xs ]
+  in map (uncurry (delta_sigma sig)) pairs
+
 -- should probably include a warning if more than 20% of cells < 5 expected or some such
 pearsons_chi² :: [[Int]] -> Double
 pearsons_chi² t = let
@@ -118,11 +125,3 @@ conf_all cs' = let
   m x = max (x-1) 0
   rm_err (C aa cc gg tt _) = (C (m aa) (m cc) (m gg) (m tt) [])
   in concat ["\t"++x | x <- map (conf (C a c g t []) . rm_err) cs']
-
-{-
-pseudo :: Int -> Int ->Counts -> Counts
-pseudo tr err (C a c g t vs) =
-  let s = tr + (a+c+g+t) `div` err
-  in C (a+s) (c+s) (g+s) (t+s) vs
--}
-
