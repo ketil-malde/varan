@@ -1,6 +1,6 @@
 module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, showC, showV, sumList, MPileRecord) where
 
-import Data.Char (toUpper, isDigit)
+import Data.Char (toUpper)
 import Data.List (foldl',intercalate,nub,elemIndex)
 import qualified Data.ByteString.Lazy.Char8 as B
 
