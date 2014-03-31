@@ -31,9 +31,19 @@ f_st cs = let
      else (h_tot - sum (zipWith (*) h_subs weights)) / h_tot
 
 -- | Calculate Pi (my version), the expected number of differences
--- between two random samples from the populations.
-pi_k :: [Counts] -> Double
-pi_k cs' = let
+-- between two random samples from the populations.  I.e. the
+-- probability that sampling once from each population will not be all
+-- the same.  One weakness is that if one population has fifty-fifty
+-- allele frequencies, the result is always exactly 0.5.  I.e. it
+-- can't identify divergent allele frequencies in that case.  Like Fst, this
+-- also is indifferent to the actual counts, so reliability depends on coverage.
+pi_k :: [Counts] -> Double 
+pi_k cs = let fs = [ map (/sum x) x | x <- map toList cs]
+  in 1 - (sum $ foldr1 (zipWith (*)) fs)
+
+-- Or, equivalent
+pi_k_alt :: [Counts] -> Double
+pi_k_alt cs' = let
   cs = map toList cs'
   no_diff = sum $ foldr1 (zipWith (*)) cs
   all_pairs = product $ map sum cs
