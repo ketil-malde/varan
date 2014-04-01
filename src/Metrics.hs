@@ -2,7 +2,7 @@
 module Metrics where
 
 import AgrestiCoull
-import MPileup (Counts(..), toList, sumList)
+import MPileup (Counts(..), toList, sumList, by_major_allele)
 import Statistics.Distribution
 import Statistics.Distribution.ChiSquared
 
@@ -89,17 +89,18 @@ ci_dist (s1,f1) (s2,f2) =
 --   with the given z-score
 delta_sigma :: Double -> (Int,Int) -> (Int,Int) -> Double
 delta_sigma z (s1,f1) (s2,f2) =
-  let (i1,j1) = confidenceInterval 1.0 s1 f1
-      (i2,j2) = confidenceInterval 1.0 s2 f2
+  let (i1,j1) = confidenceInterval z s1 f1
+      (i2,j2) = confidenceInterval z s2 f2
       mu1 = i1+j1 -- all values are times two (so it cancels out)
       mu2 = i2+j2
       sd1 = j1-i1
       sd2 = j2-i2
-  in abs (mu2-mu1) - z*(sd1+sd2)
+  in (abs (mu2-mu1) - (sd1+sd2))/2
 
 -- use on output from by_major_allele
-ds_all :: Double -> [[Int]] -> [Double]
-ds_all sig xs = let
+ds_all :: Double -> [Counts] -> [Double]
+ds_all sig counts = let
+  xs = by_major_allele counts
   (bs,bf) = (sum (map head xs), sum (map last xs))
   pairs = [((s,f),(bs-s,bf-f)) | [s,f] <- xs ]
   in map (uncurry (delta_sigma sig)) pairs

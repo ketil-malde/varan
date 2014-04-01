@@ -34,6 +34,7 @@ gen_header o (_,_,_,_,cs) = B.pack $ concat [
   ,if Options.pi_k o then "\tPi_k" else ""
   ,if Options.chi2 o then "\tChi²" else ""
   ,if Options.conf o then concat ["\tCI "++show n | n <- [1..(length cs)]] else ""
+  ,if Options.conf o then "\tdelta-sigma" else ""
   ,if Options.variants o then "\tVariants" else ""
   ,"\n"  
   ]
@@ -48,7 +49,7 @@ showPile o inp@(f,_,_,_,counts) = if suppress o && f then B.empty else (B.concat
           , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k counts))
           , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele counts))
           , when (Options.conf o) (conf_all counts)
-          , when (Options.ds o) ("\t"++(unwords $ map (printf "%.2f") $ ds_all 1 $ by_major_allele counts))
+          , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all 2.326 counts))
           , when (Options.variants o) ("\t"++showV counts)
           , B.pack "\n"
           ])

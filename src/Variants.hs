@@ -19,6 +19,7 @@ data Variant where
   Ins, Del :: String -> Variant 
   deriving (Show,Eq)
 
+-- manually inlined in the `MPileup` module.  Don't use this one.
 parse :: Char -> String -> [Variant]
 parse _ [] = []
 parse ref (c:str) 
