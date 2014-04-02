@@ -1,7 +1,8 @@
+{-# Language BangPatterns #-}
 module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, showC, showV, sumList, MPileRecord) where
 
 import Data.Char (toUpper)
-import Data.List (foldl',intercalate,nub,elemIndex)
+import Data.List (intercalate,nub,elemIndex)
 import qualified Data.ByteString.Lazy.Char8 as B
 
 import Variants hiding (parse)
@@ -32,41 +33,37 @@ readPile1 = parse1 . B.words
   where
     parse1 (chr:pos:r:rest) = let trs = triples ref rest
                                   ref = B.head r
-                              in (check trs, chr, pos, ref, map count trs)
+                              in (ignore trs, chr, pos, ref, trs)
     parse1 xs = error ("parse1: insufficiently long line:"++show xs)
     
-    check ts = let t = concat ts in null t || all (==head t) t
+    ignore cs = (<=1) $ length $ filter (/=(0::Int)) $ sumList $ map toList cs
 
     triples _ [] = []
-    triples ref (_cnt:bases:_quals:rest) = parse ref (B.map toUpper bases) : triples ref rest
+    triples ref (_cnt:bases:_quals:rest) = parse ref (C 0 0 0 0 []) (B.map toUpper bases) : triples ref rest
     triples _ _ = error "triples: incorrect number of columns"
     
     -- this could probalby be faster if counting was incorporated directly, 
     -- avoiding the intermediate [Variant] data structure
-    parse :: Char -> B.ByteString -> [Variant]
-    parse ref bs = case B.uncons bs of
-      Nothing -> []
+    parse :: Char -> Counts ->  B.ByteString -> Counts
+    parse ref !cts bs = case B.uncons bs of
+      Nothing -> cts
       Just (c_,str_) -> p c_ str_
-        where p c str 
-                | c == '^'             = parse ref $ B.drop 1 str
-                | c == '*' || c == '$' = parse ref str                               
-                | c == '.' || c == ',' = Nuc ref : parse ref str
+        where p !c !str 
+                | c == '.' || c == ',' = parse ref (add cts ref) str
+                | c == '^'             = parse ref (add cts ref) $ B.drop 1 str
+                | c == '*' || c == '$' = parse ref cts str
                 | c == '-' || c == '+' = let Just (cnt,rest) = B.readInt str
-                                         in (if c=='+' then Ins else Del) (B.unpack $ B.take (fromIntegral cnt) rest) 
-                                            : parse ref (B.drop (fromIntegral cnt) rest)
-                | otherwise            = Nuc c : parse ref str
-
-    count :: [Variant] -> Counts
-    count vars = foldl' f (C 0 0 0 0 []) vars
-      where f (C as cs gs ts vs) x = case x of
-              Nuc 'A' -> (C (as+1) cs gs ts vs)
-              Nuc 'C' -> (C as (cs+1) gs ts vs)
-              Nuc 'G' -> (C as cs (gs+1) ts vs)
-              Nuc 'T' -> (C as cs gs (ts+1) vs)
-              Nuc 'N' -> (C as cs gs ts vs)
-              Nuc _   -> error ("Not a nucleotide: "++show x++"\n"++show vars)
-              v -> (C as cs gs ts (v:vs))
-
+                                             var = (if c=='+' then Ins else Del) (B.unpack $ B.take (fromIntegral cnt) rest)
+                                         in parse ref (addvar cts var) (B.drop (fromIntegral cnt) rest)
+                | otherwise            = parse ref (add cts c) str
+              
+              add (C as cs gs ts vs) 'A' = (C (as+1) cs gs ts vs)
+              add (C as cs gs ts vs) 'C' = (C as (cs+1) gs ts vs)              
+              add (C as cs gs ts vs) 'G' = (C as cs (gs+1) ts vs)
+              add (C as cs gs ts vs) 'T' = (C as cs gs (ts+1) vs)
+              add (C as cs gs ts vs) 'N' = (C as cs gs ts vs)              
+              add _ n = error ("Not a nucleotide: "++show n)
+              addvar (C as cs gs ts vs) v = (C as cs gs ts (v:vs))
 
 -- | Show SNP counts and coverage
 showC :: Counts -> (String,Int)
