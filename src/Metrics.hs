@@ -49,6 +49,17 @@ pi_k_alt cs' = let
   all_pairs = product $ map sum cs
   in (all_pairs - no_diff) / all_pairs
 
+-- should probably include a warning if more than 20% of cells < 5 expected or some such
+pearsons_chi² :: [[Int]] -> Double
+pearsons_chi² t = let
+  cols   = map sum
+  rows x = if all null x then []
+           else sum (map head x) : rows (map tail x)
+  exps   = [[ fromIntegral (r*c) / fromIntegral (sum $ rows t) | r <- rows t] | c <- cols t ]
+  chi    = sum [ (fromIntegral a-b)^(2::Int)/b | (a,b) <- zip (concat t) (concat exps) ]
+  df     = (length t-1)*(length (head t) - 1)
+  in if any (==0) (cols t) || any (==0) (rows t) then 1.0 else complCumulative (chiSquared df) chi
+
 -- | Use AgrestiCoull to calculate significant differences between
 --   allele frequency spectra
 conf :: Counts -> Counts -> String
@@ -72,18 +83,16 @@ overlap (succ1,fail1) (succ2,fail2) =
        in if k2>=l1 || k1>=l2 then '*' else '+'
      else '.'
 
--- | Calculate distance between approximate distributions
--- in terms of their standard deviation.  Perhaps use binomial distribution directly?
--- This is a z-score, i.e. score of 2 means that the 95% CIs barely overlap.
-ci_dist :: (Int,Int) -> (Int,Int) -> Double
-ci_dist (s1,f1) (s2,f2) =
-  let (i1,j1) = confidenceInterval 1.0 s1 f1
-      (i2,j2) = confidenceInterval 1.0 s2 f2
-      mu1 = i1+j1 -- all values are times two (so it cancels out)
-      mu2 = i2+j2
-      sd1 = j1-i1
-      sd2 = j2-i2
-  in if sd1+sd2 == 0 then 0 else abs (mu2-mu1)/(sd1+sd2)
+-- | Use AgrestiCoull to calculate significant difference from
+--   a combined distribution, with error.
+conf_all :: [Counts] -> String
+conf_all cs' = let
+  cs = map toList cs' :: [[Double]]
+  [a,c,g,t] = map round  $ sumList cs
+  -- attempt to smooth errors by subtracting one, seems to work:
+  m x = max (x-1) 0
+  rm_err (C aa cc gg tt _) = (C (m aa) (m cc) (m gg) (m tt) [])
+  in concat ["\t"++x | x <- map (conf (C a c g t []) . rm_err) cs']
 
 -- | Calculate distance (in absolute numbers) between confidence intervals 
 --   with the given z-score
@@ -105,34 +114,15 @@ ds_all sig counts = let
   pairs = [((s,f),(bs-s,bf-f)) | [s,f] <- xs ]
   in map (uncurry (delta_sigma sig)) pairs
 
--- should probably include a warning if more than 20% of cells < 5 expected or some such
-pearsons_chi² :: [[Int]] -> Double
-pearsons_chi² t = let
-  cols   = map sum
-  rows x = if all null x then []
-           else sum (map head x) : rows (map tail x)
-  exps   = [[ fromIntegral (r*c) / fromIntegral (sum $ rows t) | r <- rows t] | c <- cols t ]
-  chi    = sum [ (fromIntegral a-b)^(2::Int)/b | (a,b) <- zip (concat t) (concat exps) ]
-  df     = (length t-1)*(length (head t) - 1)
-  in if any (==0) (cols t) || any (==0) (rows t) then 1.0 else complCumulative (chiSquared df) chi
-
-{-
--- | calcuate normalized vector distance between frequency counts
-dist :: Counts -> Counts -> Double
-dist c1 c2 = let
-  vnorm = sqrt . sum . map ((**2))
-  d1 = vnorm $ toList c1
-  d2 = vnorm $ toList c2
-  in vnorm $ [ x/d1-y/d2 | (x,y) <- zip (toList c1) (toList c2)]
--}
-
--- | Use AgrestiCoull to calculate significant difference from
---   a combined distribution, with error:
-conf_all :: [Counts] -> String
-conf_all cs' = let
-  cs = map toList cs' :: [[Double]]
-  [a,c,g,t] = map round  $ sumList cs
-  -- attempt to smooth errors by subtracting one, seems to work
-  m x = max (x-1) 0
-  rm_err (C aa cc gg tt _) = (C (m aa) (m cc) (m gg) (m tt) [])
-  in concat ["\t"++x | x <- map (conf (C a c g t []) . rm_err) cs']
+-- | Calculate distance between approximate distributions
+-- in terms of their standard deviation.  Perhaps use binomial distribution directly?
+-- This is a z-score, i.e. score of 2 means that the 95% CIs barely overlap.
+ci_dist :: (Int,Int) -> (Int,Int) -> Double
+ci_dist (s1,f1) (s2,f2) =
+  let (i1,j1) = confidenceInterval 1.0 s1 f1
+      (i2,j2) = confidenceInterval 1.0 s2 f2
+      mu1 = i1+j1 -- all values are times two (so it cancels out)
+      mu2 = i2+j2
+      sd1 = j1-i1
+      sd2 = j2-i2
+  in if sd1+sd2 == 0 then 0 else abs (mu2-mu1)/(sd1+sd2)
