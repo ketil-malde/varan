@@ -1,4 +1,4 @@
-module Process (proc_default, proc_globals) where
+module Process (proc_default, proc_fused, proc_globals) where
 
 import Options
 import ParMap
@@ -19,8 +19,17 @@ proc_default o (l:ls) = do
   mapM_ (B.hPutStr outh) =<< parMap (showPile o) (l:ls)
   hClose outh
 
+proc_fused :: Options -> [BL.ByteString] -> IO ()
+proc_fused o (l:ls) = do
+  outh <- if null (output o) || output o == "-" then return stdout else openFile (output o) WriteMode
+  B.hPutStr outh $ gen_header o $ readPile1 l
+  mapM_ (B.hPutStr outh) =<< parMap (showPile o . readPile1) (l:ls)
+  hClose outh
+
 proc_globals :: ProcF
 proc_globals = undefined
+               -- add to univar-like structure
+               -- coverage stats, f_st, pi - and length.
 
 -- generate the appropriate header, based on number of input pools
 gen_header :: Options -> MPileRecord -> B.ByteString
