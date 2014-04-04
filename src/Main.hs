@@ -11,10 +11,11 @@ main :: IO ()
 main = do
   (inp,o) <- Options.getArgs
   lns <- BL.lines `fmap` inp
-  -- proc_fused o lns
+  proc_fused o lns
+{-  
   let recs = map readPile1 lns -- seems faster for few CPUs?
   -- recs <- parMap readPile1 lns
   case recs of 
     [] -> error "No lines in input!"
     (m:ms) -> proc_default o (m:ms)
-
+-}
