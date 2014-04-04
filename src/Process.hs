@@ -16,14 +16,14 @@ proc_default :: ProcF
 proc_default o (l:ls) = do
   outh <- if null (output o) || output o == "-" then return stdout else openFile (output o) WriteMode
   B.hPutStr outh $ gen_header o l
-  mapM_ (B.hPutStr outh) =<< parMap (showPile o) (l:ls)
+  mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o) (l:ls)
   hClose outh
 
 proc_fused :: Options -> [BL.ByteString] -> IO ()
 proc_fused o (l:ls) = do
   outh <- if null (output o) || output o == "-" then return stdout else openFile (output o) WriteMode
   B.hPutStr outh $ gen_header o $ readPile1 l
-  mapM_ (B.hPutStr outh) =<< parMap (showPile o . readPile1) (l:ls)
+  mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1) (l:ls)
   hClose outh
 
 proc_globals :: ProcF

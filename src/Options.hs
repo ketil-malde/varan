@@ -12,6 +12,7 @@ data Options = Opts
   { suppress, variants
   , chi2, f_st, pi_k, conf, ds :: Bool
   , input, output :: FilePath
+  , threads :: Int
   } deriving (Typeable,Data)
 
 defopts :: Options
@@ -25,6 +26,7 @@ defopts = Opts
   , pi_k   = False &= help "estimate Pi_k"  
   , conf   = False &= help "check if major allele frequency confidence intervals overlap"
   , ds     = False &= help "output distance between major allele frequency confidence intervals"
+  , threads = 16 &= help "queue lenght for parallel execution"
   , input  = [] &= args &= typFile
   } &= details ["Identify variants from mpileup data"]
 
