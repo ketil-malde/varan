@@ -28,13 +28,11 @@ heteroz c1 c2 = let
   total = c1s + c2s
   hz :: [Double] -> Double
   hz xs' = let s = sum xs' in 1 - sum (map ((**2) . (/s)) xs')
-  h_tot :: Double
+  h_tot, h_subs :: Double
   h_tot = hz $ zipWith (+) c1 c2
-  h_subs, weights :: [Double]
-  h_subs = map hz [c1,c2]
-  weights = [c1s, c2s]
+  h_subs = (hz c1*c1s + hz c2*c2s)/total
   in if c1s == 0 || c2s == 0 || h_tot == 0 then (0,0) 
-     else (h_tot,sum (zipWith (*) h_subs weights)/total)
+     else (h_tot,h_subs)
 
 -- | Calculate F_ST
 f_st :: [Counts] -> Double
