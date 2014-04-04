@@ -14,10 +14,32 @@ angle c1' c2' = let
   vnorm = sqrt . sum . map ((**2))
   in sum $ zipWith (*) (map (/vnorm c1) c1) (map (/vnorm c2) c2)
 
+-- calculate total
+fst_params :: [Counts] -> [[(Double,Double)]]
+fst_params (x:xs) = go $ map toList (x:xs)
+  where go (y:ys) = map (heteroz $ y) ys : go ys
+        go [] = []
+fst_params [] = []
+
+heteroz :: [Double] -> [Double] -> (Double, Double)
+heteroz c1 c2 = let
+  total = sum (c1++c2)
+  hz :: [Double] -> Double
+  hz xs' = let s = sum xs'
+           in 1 - sum (map ((**2) . (/s)) xs')
+  h_tot :: Double
+  h_tot = hz $ sumList $ [c1,c2]
+  h_subs, weights :: [Double]
+  h_subs = map hz [c1,c2]
+  weights = [sum c/total | c <- [c1,c2]]
+  in if total == 0 || sum c1 == 0 || sum c2 == 0 
+     then (0,0) else (h_tot,sum (zipWith (*) h_subs weights))
+
 -- | Calculate F_ST
 f_st :: [Counts] -> Double
 f_st cs = let
   cs' = map toList cs
+  -- hm, er ikke dette bare nuc div?
   hz :: [Double] -> Double
   hz xs' = let s = sum xs'
            in 1 - sum (map ((**2) . (/s)) xs')

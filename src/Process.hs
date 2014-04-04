@@ -1,6 +1,6 @@
 {-# Language BangPatterns #-}
 
-module Process (proc_default, proc_fused, proc_globals, run_procs) where
+module Process (proc_fused, run_procs) where
 
 import Options
 import ParMap
@@ -20,29 +20,37 @@ proc_fused o (l:ls) = do
   mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1) (l:ls)
   hClose outh
 
+-- | Runs a set of processes, distributes each MPileRecord to them
+--   and runs the finalizer (collecting and outputting the results)  
 run_procs :: Options -> [MPileRecord] -> IO ()
 run_procs o recs = do
-  (li,lo) <- start_proc $ proc_default o
-  (gi,go) <- start_proc $ proc_globals o
+  (li,lfin) <- start_proc (proc_default o) return
+  (gi,gfin) <- start_proc proc_gpi
+               (\x -> putStrLn ("Global pi_k (nucleotide diversity): "++show x++"\n"))
+  (fi,ffin) <- start_proc proc_gfst out_gfst
   let run (r:rs) = do
-        push_procs (Just r) [li,gi]
+        push_procs (Just r) [li,gi,fi]
         run rs
       run [] = do
-        push_procs Nothing [li,gi]
-        takeMVar lo -- collect is a no-op
-        collect_globals =<< takeMVar go
+        push_procs Nothing [li,gi,fi]
+        sequence_ [lfin,gfin,ffin]
   run recs
 
-start_proc :: (MVar inv -> MVar out -> IO ()) -> IO (MVar inv, MVar out)
-start_proc f = do
+-- | The main process (in the first parameter) reads from 'inv' and puts the result
+--   in 'out' when it's done. It returns the input MVar, and the IO action that
+--   runs the finalizer (second parameter) on the final result. 
+start_proc :: (MVar inv -> MVar out -> IO ()) -> (out -> IO ()) -> IO (MVar inv, IO ())
+start_proc f g = do
   imv <- newEmptyMVar
   omv <- newEmptyMVar
   forkIO $ f imv omv
-  return (imv,omv)
+  return (imv, takeMVar omv >>= g)
 
+-- | Shortcut for feeding a datum to a list of process inputs.
 push_procs :: a -> [MVar a] -> IO ()
 push_procs r mvs = mapM_ (\m -> putMVar m r) mvs
 
+-- | Calculating per site statistics writing to a file or standard out.
 proc_default :: Options -> MVar (Maybe MPileRecord) -> MVar () -> IO ()
 proc_default o imv omv = do
   let use_stdout = null (output o) || output o == "-"
@@ -61,18 +69,38 @@ proc_default o imv omv = do
             run
   run
 
-collect_globals :: Show a => a -> IO ()
-collect_globals x = putStrLn ("Total nucleotide diversity: "++show x)
-
-proc_globals :: Options -> MVar (Maybe MPileRecord) -> MVar Double -> IO ()
-proc_globals _o imv omv = go 0.0
-  where go !acc = do
-          v <- takeMVar imv
+proc_fold :: a -> (MPileRecord -> a -> a) -> MVar (Maybe MPileRecord) -> MVar a -> IO ()
+proc_fold z f mv e = go z 
+  where go !c = do
+          v <- takeMVar mv
           case v of
-            Just (_,_,_,_,counts) -> do
-              let p = Metrics.pi_k counts
-              go (if isNaN p then acc else acc+p)
-            Nothing -> putMVar omv acc
+            Nothing -> putMVar e c 
+            Just x  -> go (f x c)
+
+proc_gpi :: MVar (Maybe MPileRecord) -> MVar Double -> IO ()
+proc_gpi = proc_fold 0.0 f
+  where f (_,_,_,_,counts) cur = 
+          let p = Metrics.pi_k counts
+          in if isNaN p then cur else cur+p
+
+proc_gfst :: MVar (Maybe MPileRecord) -> MVar [[(Double, Double)]] -> IO ()
+proc_gfst = proc_fold zero f
+  where f (_,_,_,_,counts) cur = 
+          let new = Metrics.fst_params counts
+          in deepSeq $ zipWith (zipWith plus) cur new
+        zero = repeat (repeat (0,0))
+        plus (a,c) (b,d) = (a+b,c+d)
+        deepSeq x | x == x = x
+
+out_gfst :: [[(Double,Double)]] -> IO ()
+out_gfst (x:xs) = do 
+  putStrLn (" "++ concat [ "    s"++show (i+1) | i <- [1..length x]])
+  go 1 (x:xs)
+  where go i (l:ls) = do 
+          putStr ("s"++show i++replicate (6*i-4) ' ')
+          putStrLn $ unwords $ map (\(t,w) -> printf "%.3f" ((t-w)/t)) l
+          go (i+1) ls
+        go _ [] = return ()
 
 -- generate the appropriate header, based on number of input pools
 gen_header :: Options -> MPileRecord -> B.ByteString
