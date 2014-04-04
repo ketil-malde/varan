@@ -1,4 +1,6 @@
-module Process (proc_default, proc_fused, proc_globals) where
+{-# Language BangPatterns #-}
+
+module Process (proc_default, proc_fused, proc_globals, run_procs) where
 
 import Options
 import ParMap
@@ -9,15 +11,7 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Text.Printf
 import System.IO
-
-type ProcF = Options -> [MPileRecord] -> IO ()
-
-proc_default :: ProcF
-proc_default o (l:ls) = do
-  outh <- if null (output o) || output o == "-" then return stdout else openFile (output o) WriteMode
-  B.hPutStr outh $ gen_header o l
-  mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o) (l:ls)
-  hClose outh
+import Control.Concurrent
 
 proc_fused :: Options -> [BL.ByteString] -> IO ()
 proc_fused o (l:ls) = do
@@ -26,10 +20,59 @@ proc_fused o (l:ls) = do
   mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1) (l:ls)
   hClose outh
 
-proc_globals :: ProcF
-proc_globals = undefined
-               -- add to univar-like structure
-               -- coverage stats, f_st, pi - and length.
+run_procs :: Options -> [MPileRecord] -> IO ()
+run_procs o recs = do
+  (li,lo) <- start_proc $ proc_default o
+  (gi,go) <- start_proc $ proc_globals o
+  let run (r:rs) = do
+        push_procs (Just r) [li,gi]
+        run rs
+      run [] = do
+        push_procs Nothing [li,gi]
+        takeMVar lo -- collect is a no-op
+        collect_globals =<< takeMVar go
+  run recs
+
+start_proc :: (MVar inv -> MVar out -> IO ()) -> IO (MVar inv, MVar out)
+start_proc f = do
+  imv <- newEmptyMVar
+  omv <- newEmptyMVar
+  forkIO $ f imv omv
+  return (imv,omv)
+
+push_procs :: a -> [MVar a] -> IO ()
+push_procs r mvs = mapM_ (\m -> putMVar m r) mvs
+
+proc_default :: Options -> MVar (Maybe MPileRecord) -> MVar () -> IO ()
+proc_default o imv omv = do
+  let use_stdout = null (output o) || output o == "-"
+  outh <- if use_stdout then return stdout else openFile (output o) WriteMode
+  Just l <- takeMVar imv -- or fail!
+  B.hPutStr outh $ gen_header o l
+  B.hPutStr outh $ showPile o l
+  let run = do
+        ml <- takeMVar imv
+        case ml of
+          Nothing -> do
+            if (not use_stdout) then hClose outh else return ()
+            putMVar omv ()
+          Just x -> do
+            B.hPutStr outh $ showPile o x
+            run
+  run
+
+collect_globals :: Show a => a -> IO ()
+collect_globals x = putStrLn ("Total nucleotide diversity: "++show x)
+
+proc_globals :: Options -> MVar (Maybe MPileRecord) -> MVar Double -> IO ()
+proc_globals _o imv omv = go 0.0
+  where go !acc = do
+          v <- takeMVar imv
+          case v of
+            Just (_,_,_,_,counts) -> do
+              let p = Metrics.pi_k counts
+              go (if isNaN p then acc else acc+p)
+            Nothing -> putMVar omv acc
 
 -- generate the appropriate header, based on number of input pools
 gen_header :: Options -> MPileRecord -> B.ByteString
