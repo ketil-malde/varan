@@ -79,21 +79,22 @@ proc_fold z f mv e = go z
 
 proc_gpi :: MVar (Maybe MPileRecord) -> MVar Double -> IO ()
 proc_gpi = proc_fold 0.0 f
-  where f (_,_,_,_,counts) cur = 
+  where f (sup,_,_,_,counts) cur =
           let p = Metrics.pi_k counts
-          in if isNaN p then cur else cur+p
+          in if sup || isNaN p then cur else cur+p
 
 proc_gfst :: MVar (Maybe MPileRecord) -> MVar [[(Double, Double)]] -> IO ()
 proc_gfst = proc_fold zero f
-  where f (_,_,_,_,counts) cur = 
+  where f (sup,_,_,_,counts) cur =
           let new = Metrics.fst_params counts
-          in deepSeq $ zipWith (zipWith plus) cur new
+          in if sup then cur else deepSeq $ zipWith (zipWith plus) cur new
         zero = repeat (repeat (0,0))
         plus (a,c) (b,d) = (a+b,c+d)
         deepSeq x | x == x = x
 
 out_gfst :: [[(Double,Double)]] -> IO ()
 out_gfst (x:xs) = do 
+  putStrLn "Pairwise FST values:"
   putStrLn (" "++ concat [ "    s"++show (i+1) | i <- [1..length x]])
   go 1 (x:xs)
   where go i (l:ls) = do 
