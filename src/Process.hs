@@ -79,24 +79,24 @@ proc_fold z f mv e = go z
 
 proc_gpi :: MVar (Maybe MPileRecord) -> MVar Double -> IO ()
 proc_gpi = proc_fold 0.0 f
-  where f (sup,_,_,_,counts) cur =
-          let p = Metrics.pi_k counts
-          in if sup || isNaN p then cur else cur+p
+  where f mpr cur =
+          let p = Metrics.pi_k (counts mpr)
+          in if ignore mpr || isNaN p then cur else cur+p
 
 proc_gfst :: MVar (Maybe MPileRecord) -> MVar [[(Double, Double)]] -> IO ()
 proc_gfst = proc_fold zero f
-  where f (sup,_,_,_,counts) cur =
-          let new = Metrics.fst_params counts
+  where f (MPR sup _ _ _ cts) cur =
+          let new = Metrics.fst_params cts
           in if sup then cur else deepSeq $ zipWith (zipWith plus) cur new
         zero = repeat (repeat (0,0))
         plus (a,c) (b,d) = (a+b,c+d)
         deepSeq x | x == x = x
 
 out_gfst :: [[(Double,Double)]] -> IO ()
-out_gfst (x:xs) = do 
+out_gfst xs = do
   putStrLn "Pairwise FST values:"
-  putStrLn (" "++ concat [ "    s"++show (i+1) | i <- [1..length x]])
-  go 1 (x:xs)
+  putStrLn (" "++ concat [ "    s"++show (i+1) | i <- [1..length $ head xs]])
+  go 1 xs
   where go i (l:ls) = do 
           putStr ("s"++show i++replicate (6*i-4) ' ')
           putStrLn $ unwords $ map (\(t,w) -> printf "%.3f" ((t-w)/t)) l
@@ -105,7 +105,7 @@ out_gfst (x:xs) = do
 
 -- generate the appropriate header, based on number of input pools
 gen_header :: Options -> MPileRecord -> B.ByteString
-gen_header o (_,_,_,_,cs) = B.pack $ concat [
+gen_header o (MPR _ _ _ _ cs) = B.pack $ concat [
   standard
   ,if Options.f_st o then "\tF_st" else ""
   ,if Options.pi_k o then "\tPi_k" else ""
@@ -119,26 +119,26 @@ gen_header o (_,_,_,_,cs) = B.pack $ concat [
     standard = "#Target seq.\tpos\tref"++concat ["\tsample "++show x | x <- [1..(length cs)]]++"\tcover"
 
 showPile :: Options -> MPileRecord -> B.ByteString
-showPile _ (_,_,_,_,[]) = error "Pileup with no data?"
-showPile o inp@(f,_,_,_,counts) = if suppress o && f then B.empty else (B.concat
-          [ default_out inp
-          , when (Options.f_st o) (printf "\t%.3f" (Metrics.f_st counts))
-          , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k counts))
-          , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele counts))
-          , when (Options.conf o) (conf_all counts)
-          , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all 2.326 counts))
-          , when (Options.variants o) ("\t"++showV counts)
+showPile _ (MPR _ _ _ _ []) = error "Pileup with no data?"
+showPile o mpr = if suppress o && ignore mpr then B.empty else (B.concat
+          [ default_out mpr
+          , when (Options.f_st o) (printf "\t%.3f" (Metrics.f_st $ counts mpr))
+          , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k $ counts mpr))
+          , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele $ counts mpr))
+          , when (Options.conf o) (conf_all $ counts mpr)
+          , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all 2.326 $ counts mpr))
+          , when (Options.variants o) ("\t"++showV (counts mpr))
           , B.pack "\n"
           ])
   where when p s = if p then B.pack s else B.empty
         
 default_out :: MPileRecord -> B.ByteString
-default_out (_,chr,pos,ref,stats) = 
-  B.concat ([chr',tab,pos',tab,B.singleton ref]++samples++counts)
+default_out (MPR _ chr pos ref stats) =
+  B.concat ([chr',tab,pos',tab,B.singleton ref]++samples++fmtcounts)
     where cnts = map showC stats
           tab  = B.pack "\t"
           samples = [B.append tab (B.pack s) | s <- map fst cnts]
-          counts  = [tab,B.pack $ show $ sum $ map snd cnts] -- todo: add indels?
+          fmtcounts  = [tab,B.pack $ show $ sum $ map snd cnts] -- todo: add indels?
           chr' = B.concat (BL.toChunks chr)
           pos' = B.concat (BL.toChunks pos)
 

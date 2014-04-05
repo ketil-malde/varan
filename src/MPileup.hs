@@ -1,5 +1,5 @@
 {-# Language BangPatterns #-}
-module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, showC, showV, sumList, MPileRecord) where
+module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, showC, showV, sumList, MPileRecord(..)) where
 
 import Data.Char (toUpper)
 import Data.List (intercalate,nub,elemIndex)
@@ -7,7 +7,11 @@ import qualified Data.ByteString.Lazy.Char8 as B
 
 import Variants hiding (parse)
 
-type MPileRecord = (Bool,B.ByteString,B.ByteString,Char,[Counts])
+data MPileRecord = MPR { ignore :: !Bool
+                       , chrom, cpos :: !B.ByteString
+                       , refnuc :: !Char
+                       , counts :: ![Counts]
+                       }
 
 -- convert counts to major/non-major allele counts
 by_major_allele :: [Counts] -> [[Int]] -- always length 2
@@ -33,17 +37,16 @@ readPile1 = parse1 . B.words
   where
     parse1 (chr:pos:r:rest) = let trs = triples ref rest
                                   ref = B.head r
-                              in (ignore trs, chr, pos, ref, trs)
+                              in MPR (ign trs) chr pos ref trs
     parse1 xs = error ("parse1: insufficiently long line:"++show xs)
     
-    ignore cs = (<=1) $ length $ filter (/=(0::Int)) $ sumList $ map toList cs
+    ign cs = (<=1) $ length $ filter (/=(0::Int)) $ sumList $ map toList cs
 
     triples _ [] = []
-    triples ref (_cnt:bases:_quals:rest) = parse ref (C 0 0 0 0 []) (B.map toUpper bases) : triples ref rest
+    triples ref (_cnt:bases:_quals:rest) = let this = parse ref (C 0 0 0 0 []) (B.map toUpper bases) 
+                                                      in this `seq` this : triples ref rest
     triples _ _ = error "triples: incorrect number of columns"
     
-    -- this could probalby be faster if counting was incorporated directly, 
-    -- avoiding the intermediate [Variant] data structure
     parse :: Char -> Counts ->  B.ByteString -> Counts
     parse ref !cts bs = case B.uncons bs of
       Nothing -> cts
