@@ -35,8 +35,7 @@ run_procs o recs = do
         run rs
       run [] = do
         push_procs Nothing [li,gi,ppi,fi]
-        putStrLn ""
-        sequence_ [lfin,gfin,pfin,ffin]
+        sequence_ [lfin,putStrLn "",gfin,pfin,ffin]
   run recs
 
 -- | The main process (in the first parameter) reads from 'inv' and puts the result
