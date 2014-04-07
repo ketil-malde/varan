@@ -5,6 +5,7 @@ import AgrestiCoull
 import MPileup (Counts(..), toList, sumList, by_major_allele)
 import Statistics.Distribution
 import Statistics.Distribution.ChiSquared
+import Data.List (foldl1')
 
 -- | Calculate vector angle between allele frequencies.  This is 
 --   similar to `dist`, but from 1 (equal) to 0 (orthogonal)
@@ -64,8 +65,12 @@ f_st cs = let
 -- can't identify divergent allele frequencies in that case.  Like Fst, this
 -- also is indifferent to the actual counts, so reliability depends on coverage.
 pi_k :: [Counts] -> Double 
-pi_k cs = let fs = [ map (/sum x) x | x <- map toList cs]
-  in 1 - (sum $ foldr1 (zipWith (*)) fs)
+pi_k cs = let fs = map pi_freqs cs
+  in 1 - (sum $ foldl1' (zipWith (*)) fs)
+
+pi_freqs :: Counts -> [Double]
+pi_freqs (C a c g t _) = let s = fromIntegral (a+c+g+t) 
+                         in [fromIntegral a/s,fromIntegral c/s,fromIntegral g/s,fromIntegral t/s]
 
 -- Or, equivalent
 pi_k_alt :: [Counts] -> Double
