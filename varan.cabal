@@ -14,7 +14,7 @@ Description:   Using Agresti-Coull estimation of confidence interval, report
 
 Executable varan
     Hs-Source-Dirs:  src
-    Main-Is:         Main.hs
+    Main-Is:         Varan.hs
     Other-Modules:   AgrestiCoull, MPileup, RandomSelect, Variants, Metrics, Options, ParMap
     Build-Depends:   base >= 4 && < 5, random, mtl, parallel, statistics, cmdargs, bytestring
     Ghc-Options:     -rtsopts -Wall -threaded

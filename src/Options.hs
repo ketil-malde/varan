@@ -23,14 +23,21 @@ defopts = Opts
   , suppress = False &= help "omit non-variant lines from output"
   , variants = False &= help "output list of non-SNP variants"
   , global = False &= help "calculate global statistics"
-  , chi2   = False &= help "calculate chi² probability"
+  , chi2   = False &= help "calculate chi² probability" &= ignore
   , f_st   = False &= help "estimate F_st" &= name "fst"
   , pi_k   = False &= help "estimate Pi_k"  
   , conf   = False &= help "check if major allele frequency confidence intervals overlap"
   , ds     = False &= help "output distance between major allele frequency confidence intervals"
   , threads = 16 &= help "queue lenght for parallel execution"
   , input  = [] &= args &= typFile
-  } &= details ["Identify variants from mpileup data"]
+  } &= program "varan"
+    &= summary "Identify genetic variants from pooled sequences."
+    &= details ["Examples:",""
+               ,"Read input from a pipe, calculate site-wise Fst and confidence intervals, ignoring non-variant sites:",""
+               ,"  samtools mpileup -f ref.fasta | varan --fst --conf -s -o snps.txt",""
+               ,"Read input from a file, send the site-wise output to /dev/null, and only output global statistics to standard output:",""
+               ,"  varan --global -o /dev/null input.mpile",""
+               ]    
 
 getArgs :: IO (IO BL.ByteString,Options)
 getArgs = do
