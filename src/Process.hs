@@ -19,6 +19,7 @@ proc_fused o (l:ls) = do
   B.hPutStr outh $ gen_header o $ readPile1 l
   mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1) (l:ls)
   hClose outh
+proc_fused _ [] = error "No input?"
 
 -- | Runs a set of processes, distributes each MPileRecord to them
 --   and runs the finalizer (collecting and outputting the results)  
@@ -43,7 +44,7 @@ start_proc :: (MVar inv -> MVar out -> IO ()) -> (out -> IO ()) -> IO (MVar inv,
 start_proc f g = do
   imv <- newEmptyMVar
   omv <- newEmptyMVar
-  forkIO $ f imv omv
+  _ <- forkIO $ f imv omv
   return (imv, takeMVar omv >>= g)
 
 -- | Shortcut for feeding a datum to a list of process inputs.

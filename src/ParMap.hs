@@ -9,7 +9,7 @@ parMap t f xs = do
   outs <- replicateM t newEmptyMVar
   ins  <- replicateM t newEmptyMVar
   sequence_ [forkIO (worker i o) | (i,o) <- zip ins outs]
-  forkIO $ sequence_ [putMVar i (f x) | (i,x) <- zip (cycle ins) xs]
+  _ <- forkIO $ sequence_ [putMVar i (f x) | (i,x) <- zip (cycle ins) xs]
   sequence' [takeMVar o | (o,_) <- zip (cycle outs) xs]
 
 worker :: MVar a -> MVar a -> IO b
