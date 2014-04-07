@@ -157,7 +157,7 @@ gen_header o (MPR _ _ _ _ cs) = B.pack $ concat [
   ,if Options.pi_k o then "\tPi_k" else ""
   ,if Options.chi2 o then "\tChi²" else ""
   ,if Options.conf o then concat ["\tCI "++show n | n <- [1..(length cs)]] else ""
-  ,if Options.conf o then "\tdelta-sigma" else ""
+  ,if Options.ds o then "\tdelta-sigma" else ""
   ,if Options.variants o then "\tVariants" else ""
   ,"\n"  
   ]
