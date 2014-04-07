@@ -28,14 +28,14 @@ run_procs o recs = do
   (li,lfin) <- start_proc (proc_default o) return
   (gi,gfin) <- start_proc proc_gpi
                (\x -> putStrLn ("Global pi_k (nucleotide diversity): "++show x++"\n"))
-  (fi,ffin) <- start_proc proc_gfst out_gfst
   (ppi,pfin) <- start_proc proc_gppi out_gppi
+  (fi,ffin) <- start_proc proc_gfst out_gfst
   let run (r:rs) = do
-        push_procs (Just r) [li,gi,fi,ppi]
+        push_procs (Just r) [li,gi,ppi,fi]
         run rs
       run [] = do
-        push_procs Nothing [li,gi,fi,ppi]
-        sequence_ [lfin,gfin,ffin,pfin]
+        push_procs Nothing [li,gi,ppi,fi]
+        sequence_ [lfin,gfin,pfin,ffin]
   run recs
 
 -- | The main process (in the first parameter) reads from 'inv' and puts the result
@@ -92,28 +92,43 @@ out_gfst xs = do
           go (i+1) ls
         go _ [] = return ()
 
+-- --------------------------------------------------
+
+data UniVar = UV { count :: !Int, sum1, sum2 :: !Double }
+
+add_uv :: UniVar -> Double -> UniVar
+add_uv (UV c s s2) d = UV (c+1) (s+d) (s2+d*d)
+
 -- | Collect nucleotide diversity within and between for global pairwise ND (pi)
-proc_gppi :: MVar (Maybe MPileRecord) -> MVar [[Double]] -> IO ()
+proc_gppi :: MVar (Maybe MPileRecord) -> MVar (UniVar,[[Double]]) -> IO ()
 proc_gppi = proc_fold zero f
-  where f (MPR sup _ _ _ cts) cur =
+  where f (MPR sup _ _ _ cts) (uv,cur) =
           let new = Metrics.ppi_params cts
-          in if sup then cur else deepSeq $ zipWith (zipWith plus) cur new
-        zero = repeat (repeat 0)
+              cov = fromIntegral $ sum $ map (\(C a c g t vs) -> a+c+g+t+length vs) cts
+              nu = add_uv uv cov
+              nc = if sup then cur else deepSeq $ zipWith (zipWith plus) cur new 
+          in nu `seq` nc `seq` (nu,nc )
+        zero = (UV 0 0 0, repeat (repeat 0))
         plus a b = if isNaN b then a else a+b
         deepSeq x | x == x = x
+        
 
 -- | Calculate and print global pairwise ND
 --   Todo: divide by genome size        
-out_gppi :: [[Double]] -> IO ()
-out_gppi xs = do
-  putStrLn "Pairwise Nucleotide Diversities:"
-  putStrLn (" "++ concat [ "    s"++show i | i <- [1..1+length (head xs)]])
-  go 1 xs
-  where go i (l:ls) = do 
-          putStr ("s"++show i++replicate (6*i-4) ' ')
-          putStrLn $ unwords $ map (\t -> printf "%.3f" t) l
+out_gppi :: (UniVar,[[Double]]) -> IO ()
+out_gppi (UV n s1 s2,xs) = do
+  let n' = fromIntegral n
+      go i (l:ls) = do 
+          let s = show i in putStr ("s"++s++replicate (7*i-3-length s) ' ')
+          putStrLn $ unwords $ map (\t -> printf "%.4f" (t/n')) l
           go (i+1) ls
-        go _ [] = return ()
+      go _ [] = return ()
+  putStrLn "\nCoverage statistics:"
+  putStrLn ("  covered sites: "++show n++" avg. cover: "++show (s1/n')++" std. dev.: "++show ((s1*s1/n'/n')-s2*s2/n')++"\n")
+  putStrLn "Pairwise Nucleotide Diversities:"
+  putStrLn (" "++ concat [ "     s"++show i | i <- [1..length (head xs)]])
+  go 1 xs
+  putStrLn ""
 
 -- | Calculating per site statistics writing to a file or standard out.
 proc_default :: Options -> MVar (Maybe MPileRecord) -> MVar () -> IO ()
