@@ -29,12 +29,13 @@ run_procs o recs = do
   (gi,gfin) <- start_proc proc_gpi
                (\x -> putStrLn ("Global pi_k (nucleotide diversity): "++show x++"\n"))
   (fi,ffin) <- start_proc proc_gfst out_gfst
+  (ppi,pfin) <- start_proc proc_gppi out_gppi
   let run (r:rs) = do
-        push_procs (Just r) [li,gi,fi]
+        push_procs (Just r) [li,gi,fi,ppi]
         run rs
       run [] = do
-        push_procs Nothing [li,gi,fi]
-        sequence_ [lfin,gfin,ffin]
+        push_procs Nothing [li,gi,fi,ppi]
+        sequence_ [lfin,gfin,ffin,pfin]
   run recs
 
 -- | The main process (in the first parameter) reads from 'inv' and puts the result
@@ -50,6 +51,69 @@ start_proc f g = do
 -- | Shortcut for feeding a datum to a list of process inputs.
 push_procs :: a -> [MVar a] -> IO ()
 push_procs r mvs = mapM_ (\m -> putMVar m r) mvs
+
+proc_fold :: a -> (MPileRecord -> a -> a) -> MVar (Maybe MPileRecord) -> MVar a -> IO ()
+proc_fold z f mv e = go z 
+  where go !c = do
+          v <- takeMVar mv
+          case v of
+            Nothing -> putMVar e c 
+            Just x  -> go (f x c)
+
+-- --------------------------------------------------
+-- Actual output calculations
+
+-- | Calculate global nucleotide diversity
+proc_gpi :: MVar (Maybe MPileRecord) -> MVar Double -> IO ()
+proc_gpi = proc_fold 0.0 f
+  where f mpr cur =
+          let p = Metrics.pi_k (counts mpr)
+          in if ignore mpr || isNaN p then cur else cur+p
+
+-- | Collect variation within and between for global pairwise Fst
+proc_gfst :: MVar (Maybe MPileRecord) -> MVar [[(Double, Double)]] -> IO ()
+proc_gfst = proc_fold zero f
+  where f (MPR sup _ _ _ cts) cur =
+          let new = Metrics.fst_params cts
+          in if sup then cur else deepSeq $ zipWith (zipWith plus) cur new
+        zero = repeat (repeat (0,0))
+        plus (a,c) (b,d) = (a+b,c+d)
+        deepSeq x | x == x = x
+
+-- | Calculate and print global pairwise Fst
+out_gfst :: [[(Double,Double)]] -> IO ()
+out_gfst xs = do
+  putStrLn "Pairwise FST values:"
+  putStrLn (" "++ concat [ "    s"++show (i+1) | i <- [1..length $ head xs]])
+  go 1 xs
+  where go i (l:ls) = do 
+          putStr ("s"++show i++replicate (6*i-4) ' ')
+          putStrLn $ unwords $ map (\(t,w) -> printf "%.3f" ((t-w)/t)) l
+          go (i+1) ls
+        go _ [] = return ()
+
+-- | Collect nucleotide diversity within and between for global pairwise ND (pi)
+proc_gppi :: MVar (Maybe MPileRecord) -> MVar [[Double]] -> IO ()
+proc_gppi = proc_fold zero f
+  where f (MPR sup _ _ _ cts) cur =
+          let new = Metrics.ppi_params cts
+          in if sup then cur else deepSeq $ zipWith (zipWith plus) cur new
+        zero = repeat (repeat 0)
+        plus a b = if isNaN b then a else a+b
+        deepSeq x | x == x = x
+
+-- | Calculate and print global pairwise ND
+--   Todo: divide by genome size        
+out_gppi :: [[Double]] -> IO ()
+out_gppi xs = do
+  putStrLn "Pairwise Nucleotide Diversities:"
+  putStrLn (" "++ concat [ "    s"++show i | i <- [1..1+length (head xs)]])
+  go 1 xs
+  where go i (l:ls) = do 
+          putStr ("s"++show i++replicate (6*i-4) ' ')
+          putStrLn $ unwords $ map (\t -> printf "%.3f" t) l
+          go (i+1) ls
+        go _ [] = return ()
 
 -- | Calculating per site statistics writing to a file or standard out.
 proc_default :: Options -> MVar (Maybe MPileRecord) -> MVar () -> IO ()
@@ -69,40 +133,6 @@ proc_default o imv omv = do
             B.hPutStr outh $ showPile o x
             run
   run
-
-proc_fold :: a -> (MPileRecord -> a -> a) -> MVar (Maybe MPileRecord) -> MVar a -> IO ()
-proc_fold z f mv e = go z 
-  where go !c = do
-          v <- takeMVar mv
-          case v of
-            Nothing -> putMVar e c 
-            Just x  -> go (f x c)
-
-proc_gpi :: MVar (Maybe MPileRecord) -> MVar Double -> IO ()
-proc_gpi = proc_fold 0.0 f
-  where f mpr cur =
-          let p = Metrics.pi_k (counts mpr)
-          in if ignore mpr || isNaN p then cur else cur+p
-
-proc_gfst :: MVar (Maybe MPileRecord) -> MVar [[(Double, Double)]] -> IO ()
-proc_gfst = proc_fold zero f
-  where f (MPR sup _ _ _ cts) cur =
-          let new = Metrics.fst_params cts
-          in if sup then cur else deepSeq $ zipWith (zipWith plus) cur new
-        zero = repeat (repeat (0,0))
-        plus (a,c) (b,d) = (a+b,c+d)
-        deepSeq x | x == x = x
-
-out_gfst :: [[(Double,Double)]] -> IO ()
-out_gfst xs = do
-  putStrLn "Pairwise FST values:"
-  putStrLn (" "++ concat [ "    s"++show (i+1) | i <- [1..length $ head xs]])
-  go 1 xs
-  where go i (l:ls) = do 
-          putStr ("s"++show i++replicate (6*i-4) ' ')
-          putStrLn $ unwords $ map (\(t,w) -> printf "%.3f" ((t-w)/t)) l
-          go (i+1) ls
-        go _ [] = return ()
 
 -- generate the appropriate header, based on number of input pools
 gen_header :: Options -> MPileRecord -> B.ByteString

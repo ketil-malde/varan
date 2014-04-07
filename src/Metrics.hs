@@ -14,7 +14,12 @@ angle c1' c2' = let
   vnorm = sqrt . sum . map ((**2))
   in sum $ zipWith (*) (map (/vnorm c1) c1) (map (/vnorm c2) c2)
 
--- calculate total
+-- Calculate pairwise nucleotide diversities
+ppi_params :: [Counts] -> [[Double]]
+ppi_params (c:cs) = map (\x -> pi_k [c,x]) (c:cs) : ppi_params cs
+ppi_params [] = []
+
+-- calculate diversity within and between sample pairs
 fst_params :: [Counts] -> [[(Double,Double)]]
 fst_params (x:xs) = go $ map toList (x:xs)
   where go (y:ys) = map (heteroz $ y) ys : go ys
