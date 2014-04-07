@@ -35,6 +35,7 @@ run_procs o recs = do
         run rs
       run [] = do
         push_procs Nothing [li,gi,ppi,fi]
+        putStrLn ""
         sequence_ [lfin,gfin,pfin,ffin]
   run recs
 
@@ -111,7 +112,7 @@ proc_gppi = proc_fold zero f
         zero = (UV 0 0 0, repeat (repeat 0))
         plus a b = if isNaN b then a else a+b
         deepSeq x | x == x = x
-        
+
 
 -- | Calculate and print global pairwise ND
 --   Todo: divide by genome size        
@@ -123,8 +124,8 @@ out_gppi (UV n s1 s2,xs) = do
           putStrLn $ unwords $ map (\t -> printf "%.4f" (t/n')) l
           go (i+1) ls
       go _ [] = return ()
-  putStrLn "\nCoverage statistics:"
-  putStrLn ("  covered sites: "++show n++" avg. cover: "++show (s1/n')++" std. dev.: "++show ((s1*s1/n'/n')-s2*s2/n')++"\n")
+  putStrLn "Coverage statistics:"
+  printf "  covered sites: %d\n  avg. cover: %.2f\n  std. dev.: %.2f\n\n" n  (s1/n') (sqrt (s2/n'-(s1*s1)/(n'*n')))
   putStrLn "Pairwise Nucleotide Diversities:"
   putStrLn (" "++ concat [ "     s"++show i | i <- [1..length (head xs)]])
   go 1 xs
@@ -178,6 +179,7 @@ showPile o mpr = if suppress o && ignore mpr then B.empty else (B.concat
           ])
   where when p s = if p then B.pack s else B.empty
         
+-- | The default output, with only coverage statistics
 default_out :: MPileRecord -> B.ByteString
 default_out (MPR _ chr pos ref stats) =
   B.concat ([chr',tab,pos',tab,B.singleton ref]++samples++fmtcounts)
