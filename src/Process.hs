@@ -96,7 +96,7 @@ out_gfst xs = do
 
 -- --------------------------------------------------
 
-data UniVar = UV { count :: !Int, sum1, sum2 :: !Double }
+data UniVar = UV { count :: {-# UNPACK #-} !Int, sum1, sum2 :: {-# UNPACK #-} !Double }
 
 add_uv :: UniVar -> Double -> UniVar
 add_uv (UV c s s2) d = UV (c+1) (s+d) (s2+d*d)

@@ -69,7 +69,6 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
               add (C as cs gs ts vs) 'N' = (C as cs gs ts vs)              
               add _ n = error ("Not a nucleotide: "++show n)
               addvar (C as cs gs ts vs) v = (C as cs gs ts (v:vs))
-{-# INLINE readPile1 #-}
 
 -- | Show SNP counts and coverage
 showC :: Counts -> (String,Int)
