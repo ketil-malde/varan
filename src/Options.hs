@@ -28,7 +28,7 @@ defopts = Opts
   , pi_k   = False &= help "estimate Pi_k"  
   , conf   = False &= help "check if major allele frequency confidence intervals overlap"
   , ds     = False &= help "output distance between major allele frequency confidence intervals"
-  , threads = 16 &= help "queue lenght for parallel execution"
+  , threads = 100 &= help "queue lenght for parallel execution"
   , input  = [] &= args &= typFile
   } &= program "varan"
     &= summary "Identify genetic variants from pooled sequences."
