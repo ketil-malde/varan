@@ -47,6 +47,8 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
                                                       in this `seq` this : triples ref rest
     triples _ _ = error "triples: incorrect number of columns"
     
+    -- note: does not (yet) deal with '<' and '>', which apparently can occur
+    -- perhaps it would be faster to do this as a sequence of BS ops, which would fuse?
     parse :: Char -> Counts ->  B.ByteString -> Counts
     parse ref !cts bs = case B.uncons bs of
       Nothing -> cts

@@ -124,7 +124,7 @@ out_gppi (UV n s1 s2,xs) = do
           go (i+1) ls
       go _ [] = return ()
   putStrLn "Coverage statistics:"
-  printf "  covered sites: %d\n  avg. cover: %.2f\n  std. dev.: %.2f\n\n" n  (s1/n') (sqrt (s2/n'-(s1*s1)/(n'*n')))
+  _ <- printf "  covered sites: %d\n  avg. cover: %.2f\n  std. dev.: %.2f\n\n" n  (s1/n') (sqrt (s2/n'-(s1*s1)/(n'*n')))
   putStrLn "Pairwise Nucleotide Diversities:"
   putStrLn (" "++ concat [ "     s"++show i | i <- [1..length (head xs)]])
   go 1 xs
