@@ -33,7 +33,7 @@ major_allele (C a b c d _) (C e f g h _) =
 -- count major allele in first sample
 -- return flag whether informative, chrom, pos, ref, 
 readPile1 :: B.ByteString -> MPileRecord 
-readPile1 = parse1 . B.words
+readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty strings in columns
   where
     parse1 (chr:pos:r:rest) = let trs = triples ref rest
                                   ref = B.head r
