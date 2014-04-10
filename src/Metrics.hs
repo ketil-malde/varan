@@ -2,7 +2,7 @@
 module Metrics where
 
 import AgrestiCoull
-import MPileup (toList, sumList, by_major_allele)
+import MPileup (by_major_allele)
 import Count
 import Statistics.Distribution
 import Statistics.Distribution.ChiSquared
@@ -23,13 +23,24 @@ ppi_params [] = []
 
 -- calculate diversity within and between sample pairs
 fst_params :: [Counts] -> [[(Double,Double)]]
-fst_params (x:xs) = go $ map (toList . getcounts) (x:xs)
+fst_params (x:xs) = go $ map getcounts (x:xs)
   where go (y:ys) = map (heteroz $ y) ys : go ys
         go [] = []
 fst_params [] = []
 
-heteroz :: [Double] -> [Double] -> (Double, Double)
+heteroz :: Int64 -> Int64 -> (Double,Double)
 heteroz c1 c2 = let
+  c1s = fromIntegral $ covC c1
+  c2s = fromIntegral $covC c2
+  total = c1s + c2s
+  hz x = 1 - fromIntegral ((getA x)^2 + (getC x)^2 + (getG x)^2 + (getT x)^2)/fromIntegral (covC x)^2
+  h_tot = hz (c1 `ptAdd` c2)
+  h_subs = (hz c1*c1s + hz c2*c2s)/total
+  in if c1s == 0 || c2s == 0 || h_tot == 0.0 then (0,0) 
+     else (h_tot,h_subs)
+
+heteroz_ :: [Double] -> [Double] -> (Double, Double)
+heteroz_ c1 c2 = let
   c1s = sum c1
   c2s = sum c2
   total = c1s + c2s
@@ -41,9 +52,22 @@ heteroz c1 c2 = let
   in if c1s == 0 || c2s == 0 || h_tot == 0 then (0,0) 
      else (h_tot,h_subs)
 
--- | Calculate F_ST
 f_st :: [Counts] -> Double
-f_st cs = let
+f_st = f_st' . map getcounts
+
+f_st' :: [Int64] -> Double
+f_st' xs = let
+  hz x = 1 - fromIntegral ((getA x)^2 + (getC x)^2 + (getG x)^2 + (getT x)^2)/fromIntegral (covC x)^2
+  h_subs, weights :: [Double]
+  h_tot = hz (ptSum xs)
+  h_subs = map hz xs
+  weights = let t = fromIntegral $ covC (ptSum xs) in [fromIntegral (covC x)/t | x <- xs]
+  in if h_tot == 0 then 0.0 
+     else (h_tot - sum (zipWith (*) h_subs weights)) / h_tot
+
+-- | Calculate F_ST
+f_st_ :: [Counts] -> Double
+f_st_ cs = let
   cs' = map (toList . getcounts) cs
   -- hm, er ikke dette bare nuc div?
   hz :: [Double] -> Double
@@ -67,7 +91,7 @@ f_st cs = let
 -- also is indifferent to the actual counts, so reliability depends on coverage.
 pi_k :: [Counts] -> Double 
 pi_k cs = let fs = map pi_freqs cs
-              c  = fromIntegral $ sum $ concatMap (toList . getcounts) cs
+              c  = fromIntegral $ sum $ map (covC . getcounts) cs
   in if c>1 then c/(c-1)*(1 - (sum $ foldl1' (zipWith (*)) fs)) else 0
 
 pi_freqs :: Counts -> [Double]

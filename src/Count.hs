@@ -1,6 +1,11 @@
 -- High performance counting data structure
 
-module Count where
+module Count (Counts(..), getcounts
+             , getA, getC, getG, getT
+             , addA, addC, addG, addT
+             , covC, ptAdd, ptSum
+             , toList, sumList 
+             , Int64) where
 
 import Variants       
        

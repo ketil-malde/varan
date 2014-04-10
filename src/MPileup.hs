@@ -72,7 +72,7 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
 
 -- | Show SNP counts and coverage
 showC :: Counts -> (String,Int)
-showC (C x _) = (" "++(intercalate ":" $ map show (toList x)),covC x)
+showC (C x _) = (" "++(intercalate ":" $ map show (toList x :: [Int])),covC x)
 
 -- | Show structural variant count
 showV :: [Counts] -> String
