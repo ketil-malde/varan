@@ -66,7 +66,8 @@ f_st cs = let
 -- also is indifferent to the actual counts, so reliability depends on coverage.
 pi_k :: [Counts] -> Double 
 pi_k cs = let fs = map pi_freqs cs
-  in 1 - (sum $ foldl1' (zipWith (*)) fs)
+              c  = fromIntegral $ sum $ concatMap toList cs
+  in if c>1 then c/(c-1)*(1 - (sum $ foldl1' (zipWith (*)) fs)) else 0
 
 pi_freqs :: Counts -> [Double]
 pi_freqs (C a c g t _) = let s = fromIntegral (a+c+g+t) 
