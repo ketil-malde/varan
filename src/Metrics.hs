@@ -2,7 +2,8 @@
 module Metrics where
 
 import AgrestiCoull
-import MPileup (Counts(..), toList, sumList, by_major_allele)
+import MPileup (toList, sumList, by_major_allele)
+import Count
 import Statistics.Distribution
 import Statistics.Distribution.ChiSquared
 import Data.List (foldl1')
@@ -11,7 +12,7 @@ import Data.List (foldl1')
 --   similar to `dist`, but from 1 (equal) to 0 (orthogonal)
 angle :: Counts -> Counts -> Double
 angle c1' c2' = let
-  (c1,c2) = (toList c1', toList c2')
+  (c1,c2) = (toList $ getcounts c1', toList $ getcounts c2')
   vnorm = sqrt . sum . map ((**2))
   in sum $ zipWith (*) (map (/vnorm c1) c1) (map (/vnorm c2) c2)
 
@@ -22,7 +23,7 @@ ppi_params [] = []
 
 -- calculate diversity within and between sample pairs
 fst_params :: [Counts] -> [[(Double,Double)]]
-fst_params (x:xs) = go $ map toList (x:xs)
+fst_params (x:xs) = go $ map (toList . getcounts) (x:xs)
   where go (y:ys) = map (heteroz $ y) ys : go ys
         go [] = []
 fst_params [] = []
@@ -43,7 +44,7 @@ heteroz c1 c2 = let
 -- | Calculate F_ST
 f_st :: [Counts] -> Double
 f_st cs = let
-  cs' = map toList cs
+  cs' = map (toList . getcounts) cs
   -- hm, er ikke dette bare nuc div?
   hz :: [Double] -> Double
   hz xs' = let s = sum xs'
@@ -66,17 +67,17 @@ f_st cs = let
 -- also is indifferent to the actual counts, so reliability depends on coverage.
 pi_k :: [Counts] -> Double 
 pi_k cs = let fs = map pi_freqs cs
-              c  = fromIntegral $ sum $ concatMap toList cs
+              c  = fromIntegral $ sum $ concatMap (toList . getcounts) cs
   in if c>1 then c/(c-1)*(1 - (sum $ foldl1' (zipWith (*)) fs)) else 0
 
 pi_freqs :: Counts -> [Double]
-pi_freqs (C a c g t _) = let s = fromIntegral (a+c+g+t) 
-                         in [fromIntegral a/s,fromIntegral c/s,fromIntegral g/s,fromIntegral t/s]
+pi_freqs (C x _) = let s = fromIntegral $ covC x
+                   in [fromIntegral (getA x)/s,fromIntegral (getC x)/s,fromIntegral (getG x)/s,fromIntegral (getT x)/s]
 
 -- Or, equivalent
 pi_k_alt :: [Counts] -> Double
 pi_k_alt cs' = let
-  cs = map toList cs'
+  cs = map (toList . getcounts) cs'
   no_diff = sum $ foldr1 (zipWith (*)) cs
   all_pairs = product $ map sum cs
   in (all_pairs - no_diff) / all_pairs
@@ -95,13 +96,13 @@ pearsons_chi² t = let
 -- | Use AgrestiCoull to calculate significant differences between
 --   allele frequency spectra
 conf :: Counts -> Counts -> String
-conf (C a1 c1 g1 t1 _v1) (C a2 c2 g2 t2 _v2) = let
-  s1 = a1+c1+g1+t1  -- don't count structural variants
-  s2 = a2+c2+g2+t2
-  in [overlap (a1,s1-a1) (a2,s2-a2)
-     ,overlap (c1,s1-c1) (c2,s2-c2)
-     ,overlap (g1,s1-g1) (g2,s2-g2)
-     ,overlap (t1,s1-t1) (t2,s2-t2)
+conf (C x _v1) (C y _v2) = let
+  s1 = covC x  -- don't count structural variants
+  s2 = covC y
+  in [overlap (getA x,s1-getA x) (getA y,s2-getA y)
+     ,overlap (getC x,s1-getC x) (getC y,s2-getC y)
+     ,overlap (getG x,s1-getG x) (getG y,s2-getG y)
+     ,overlap (getT x,s1-getT x) (getT y,s2-getT y)
      ]
 
 -- | Helper function for conf
@@ -119,12 +120,10 @@ overlap (succ1,fail1) (succ2,fail2) =
 --   a combined distribution, with error.
 conf_all :: [Counts] -> String
 conf_all cs' = let
-  cs = map toList cs' :: [[Double]]
-  [a,c,g,t] = map round  $ sumList cs
   -- attempt to smooth errors by subtracting one, seems to work:
   m x = max (x-1) 0
-  rm_err (C aa cc gg tt _) = (C (m aa) (m cc) (m gg) (m tt) [])
-  in concat ["\t"++x | x <- map (conf (C a c g t []) . rm_err) cs']
+  rm_err (C x _) = C (0 `addA` (m $ getA x) `addC` (m $ getC x) `addG` (m $ getG x) `addT` (m $ getT x)) []
+  in concat ["\t"++x | x <- map (conf (C (ptSum $ map getcounts cs') []) . rm_err) cs']
 
 -- | Calculate distance (in absolute numbers) between confidence intervals 
 --   with the given z-score

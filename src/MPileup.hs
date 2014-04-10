@@ -4,8 +4,8 @@ module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, sh
 import Data.Char (toUpper)
 import Data.List (intercalate,nub,elemIndex)
 import qualified Data.ByteString.Lazy.Char8 as B
-
 import Variants hiding (parse)
+import Count
 
 data MPileRecord = MPR { ignore :: !Bool
                        , chrom, cpos :: !B.ByteString
@@ -16,16 +16,16 @@ data MPileRecord = MPR { ignore :: !Bool
 -- convert counts to major/non-major allele counts
 by_major_allele :: [Counts] -> [[Int]] -- always length 2
 by_major_allele cs = let
-  ls = map toList cs
+  ls = map (toList . getcounts) cs
   s  = sumList ls
   Just i = elemIndex (maximum s) s
   in map (\l -> [l!!i,sum l-l!!i]) ls
 
 -- pick out major allele in first count, and output number of same/different
 major_allele :: Counts -> Counts -> ((Int,Int),(Int,Int))
-major_allele (C a b c d _) (C e f g h _) =
-  let s1 = [a,b,c,d] 
-      s2 = [e,f,g,h]
+major_allele (C x _) (C y _) =
+  let s1 = toList x
+      s2 = toList y
       m = maximum s1
       Just i = elemIndex m s1
   in ((m, sum s1-m),(s2!!i,sum [s2!!j | j <- [0..3], j /= i]))
@@ -40,10 +40,10 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
                               in MPR (ign trs) chr pos ref trs
     parse1 xs = error ("parse1: insufficiently long line:"++show xs)
     
-    ign cs = (<=1) $ length $ filter (/=(0::Int)) $ sumList $ map toList cs
+    ign cs = (<=1) $ length $ filter (/=(0::Int)) $ toList $ ptSum $ map getcounts cs
 
     triples _ [] = []
-    triples ref (_cnt:bases:_quals:rest) = let this = parse ref (C 0 0 0 0 []) (B.map toUpper bases) 
+    triples ref (_cnt:bases:_quals:rest) = let this = parse ref (C 0 []) (B.map toUpper bases) 
                                                       in this `seq` this : triples ref rest
     triples _ _ = error "triples: incorrect number of columns"
     
@@ -62,22 +62,22 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
                                          in parse ref (addvar cts var) (B.drop (fromIntegral cnt) rest)
                 | otherwise            = parse ref (add cts c) str
               
-              add (C as cs gs ts vs) 'A' = (C (as+1) cs gs ts vs)
-              add (C as cs gs ts vs) 'C' = (C as (cs+1) gs ts vs)              
-              add (C as cs gs ts vs) 'G' = (C as cs (gs+1) ts vs)
-              add (C as cs gs ts vs) 'T' = (C as cs gs (ts+1) vs)
-              add (C as cs gs ts vs) 'N' = (C as cs gs ts vs)              
+              add (C x vs) 'A' = (C (addA x 1) vs)
+              add (C x vs) 'C' = (C (addC x 1) vs)
+              add (C x vs) 'G' = (C (addG x 1) vs)
+              add (C x vs) 'T' = (C (addT x 1) vs)
+              add c 'N' = c
               add _ n = error ("Not a nucleotide: "++show n)
-              addvar (C as cs gs ts vs) v = (C as cs gs ts (v:vs))
+              addvar (C x vs) v = (C x (v:vs))
 
 -- | Show SNP counts and coverage
 showC :: Counts -> (String,Int)
-showC (C as cs gs ts _) = (" "++(intercalate ":" $ map show [as,cs,gs,ts]),as+cs+gs+ts)
+showC (C x _) = (" "++(intercalate ":" $ map show (toList x)),covC x)
 
 -- | Show structural variant count
 showV :: [Counts] -> String
 showV cs = let
-  getv (C _ _ _ _ v) = v
+  getv (C _ v) = v
   vs = nub $ concatMap getv cs
   countV :: Variant -> Counts -> Int
   countV v c = length . filter (==v) $ getv c

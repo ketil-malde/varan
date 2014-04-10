@@ -6,6 +6,7 @@ import Options
 import ParMap
 import MPileup
 import Metrics
+import Count
 
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -106,7 +107,7 @@ proc_gppi :: MVar (Maybe MPileRecord) -> MVar (UniVar,[[Double]]) -> IO ()
 proc_gppi = proc_fold zero f
   where f (MPR sup _ _ _ cts) (uv,cur) =
           let new = Metrics.ppi_params cts
-              cov = fromIntegral $ sum $ map (\(C a c g t vs) -> a+c+g+t+length vs) cts
+              cov = fromIntegral $ sum $ map (covC . getcounts) cts
               nu = add_uv uv cov
               nc = if sup then cur else deepSeq $ zipWith (zipWith plus) cur new 
           in nu `seq` nc `seq` (nu,nc )
