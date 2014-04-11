@@ -31,9 +31,9 @@ fst_params [] = []
 heteroz :: Int64 -> Int64 -> (Double,Double)
 heteroz c1 c2 = let
   c1s = fromIntegral $ covC c1
-  c2s = fromIntegral $covC c2
+  c2s = fromIntegral $ covC c2
   total = c1s + c2s
-  hz x = 1 - fromIntegral ((getA x)^2 + (getC x)^2 + (getG x)^2 + (getT x)^2)/fromIntegral (covC x)^2
+  hz x = 1 - fromIntegral (sq (getA x) + sq (getC x) + sq (getG x) + sq (getT x))/fromIntegral (sq $ covC x) where sq z = z*z
   h_tot = hz (c1 `ptAdd` c2)
   h_subs = (hz c1*c1s + hz c2*c2s)/total
   in if c1s == 0 || c2s == 0 || h_tot == 0.0 then (0,0) 
@@ -57,7 +57,7 @@ f_st = f_st' . map getcounts
 
 f_st' :: [Int64] -> Double
 f_st' xs = let
-  hz x = 1 - fromIntegral ((getA x)^2 + (getC x)^2 + (getG x)^2 + (getT x)^2)/fromIntegral (covC x)^2
+  hz x = 1 - fromIntegral (sq (getA x) + sq (getC x) + sq (getG x) + sq (getT x))/fromIntegral (sq $ covC x) where sq z = z*z
   h_subs, weights :: [Double]
   h_tot = hz (ptSum xs)
   h_subs = map hz xs
@@ -89,14 +89,18 @@ f_st_ cs = let
 -- allele frequencies, the result is always exactly 0.5.  I.e. it
 -- can't identify divergent allele frequencies in that case.  Like Fst, this
 -- also is indifferent to the actual counts, so reliability depends on coverage.
-pi_k :: [Counts] -> Double 
-pi_k cs = let fs = map pi_freqs cs
-              c  = fromIntegral $ sum $ map (covC . getcounts) cs
+
+pi_k :: [Counts] -> Double
+pi_k = pi_k' . map getcounts
+
+pi_k' :: [Int64] -> Double
+pi_k' cs = let fs = map pi_freqs cs
+               c = fromIntegral $ covC $ ptSum $ cs
   in if c>1 then c/(c-1)*(1 - (sum $ foldl1' (zipWith (*)) fs)) else 0
 
-pi_freqs :: Counts -> [Double]
-pi_freqs (C x _) = let s = fromIntegral $ covC x
-                   in [fromIntegral (getA x)/s,fromIntegral (getC x)/s,fromIntegral (getG x)/s,fromIntegral (getT x)/s]
+pi_freqs :: Int64 -> [Double]
+pi_freqs x = let s = fromIntegral $ covC x
+             in [fromIntegral (getA x)/s,fromIntegral (getC x)/s,fromIntegral (getG x)/s,fromIntegral (getT x)/s]
 
 -- Or, equivalent
 pi_k_alt :: [Counts] -> Double
