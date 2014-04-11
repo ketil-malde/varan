@@ -1,6 +1,6 @@
 {-# Language BangPatterns #-}
 
-module Process (proc_fused, run_procs) where
+module Process (proc_fused, run_procs, showPile') where
 
 import Options
 import ParMap
@@ -26,19 +26,24 @@ proc_fused _ [] = error "No input?"
 
 -- | Runs a set of processes, distributes each MPileRecord to them
 --   and runs the finalizer (collecting and outputting the results)  
-run_procs :: Options -> [MPileRecord] -> IO ()
-run_procs o recs = do
-  (li,lfin) <- start_proc (proc_default o) return
+run_procs :: Options -> [MPileRecord'] -> IO ()
+run_procs o recs@(M r1 _:_) = do
+  -- initialize default output
+  let use_stdout = null (output o) || output o == "-"
+  outh <- if use_stdout then return stdout else openFile (output o) WriteMode
+  B.hPutStr outh $ gen_header o r1
   (gi,gfin) <- start_proc proc_gpi
                (\x -> putStrLn ("Global pi_k (nucleotide diversity): "++show x++"\n"))
   (ppi,pfin) <- start_proc proc_gppi out_gppi
   (fi,ffin) <- start_proc proc_gfst out_gfst
-  let run (r:rs) = do
-        push_procs (Just r) [li,gi,ppi,fi]
+  let run (M r s:rs) = do
+        push_procs (Just r) [gi,ppi,fi]
+        B.hPutStr outh s
         run rs
       run [] = do
-        push_procs Nothing [li,gi,ppi,fi]
-        sequence_ [lfin,putStrLn "",gfin,pfin,ffin]
+        push_procs Nothing [gi,ppi,fi]
+        putStrLn ""
+        sequence_ [gfin,pfin,ffin]
   run recs
 
 -- | The main process (in the first parameter) reads from 'inv' and puts the result
@@ -166,6 +171,11 @@ gen_header o (MPR _ _ _ _ cs) = B.pack $ concat [
   ]
   where
     standard = "#Target seq.\tpos\tref"++concat ["\tsample "++show x | x <- [1..(length cs)]]++"\tcover"
+
+data MPileRecord' = M !MPileRecord !B.ByteString
+
+showPile' :: Options -> MPileRecord -> MPileRecord'
+showPile' o m = M m (showPile o m)
 
 showPile :: Options -> MPileRecord -> B.ByteString
 showPile _ (MPR _ _ _ _ []) = error "Pileup with no data?"

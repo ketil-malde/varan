@@ -1,7 +1,7 @@
 module Main where
 
 import MPileup (readPile1)
-import Process (proc_fused, run_procs)
+import Process (proc_fused, run_procs, showPile')
 import Options
 import Control.Monad (when)
 import ParMap
@@ -17,6 +17,7 @@ main = do
     then proc_fused o lns -- faster?
     else do
       -- seems faster for few CPUs?
-      recs <- if threads o > 1 then parMap (threads o) readPile1 lns 
-              else return $ map readPile1 lns
+      let comb = showPile' o . readPile1
+      recs <- if threads o > 1 then parMap (threads o) comb lns 
+              else return $ map comb lns
       run_procs o recs
