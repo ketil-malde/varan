@@ -25,10 +25,10 @@ getG = flip shiftR 16 . fromIntegral . (.&.) 0xFFFF0000
 getT = fromIntegral . (.&.) 0xFFFF
 
 addA, addC, addG, addT :: Int64 -> Int -> Int64
-addA c i = (c .&. 0x0000FFFFFFFFFFFF) .|. (fromIntegral (getA c + i) `shiftL` 48)
-addC c i = (c .&. 0xFFFF0000FFFFFFFF) .|. (fromIntegral (getC c + i) `shiftL` 32)
-addG c i = (c .&. 0xFFFFFFFF0000FFFF) .|. (fromIntegral (getG c + i) `shiftL` 16)
-addT c i = (c .&. 0xFFFFFFFFFFFF0000) .|.  fromIntegral (getT c + i)
+addA c i = c + fromIntegral (i `shiftL` 48)
+addC c i = c + fromIntegral (i `shiftL` 32)
+addG c i = c + fromIntegral (i `shiftL` 16)
+addT c i = c + fromIntegral i
 
 covC :: Int64 -> Int
 covC c = getA c + getC c + getG c + getT c
