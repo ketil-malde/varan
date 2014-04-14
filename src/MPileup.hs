@@ -32,19 +32,25 @@ major_allele (C x _) (C y _) =
 
 -- count major allele in first sample
 -- return flag whether informative, chrom, pos, ref, 
-readPile1 :: B.ByteString -> MPileRecord 
-readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty strings in columns
+readPile1 :: Int -> B.ByteString -> MPileRecord 
+readPile1 maxct = parse1 . B.split '\t'  -- later samtools sometimes outputs empty strings in columns
   where
     parse1 (chr:pos:r:rest) = let trs = triples ref rest
                                   ref = B.head r
                               in MPR (ign trs) chr pos ref trs
     parse1 xs = error ("parse1: insufficiently long line:"++show xs)
     
-    ign cs = (<=1) $ length $ filter (/=(0::Int)) $ toList $ ptSum $ map getcounts cs
+    -- set the ignore flag if we only see one or zero alleles    
+    ign cs = let xs = map getcounts cs
+             in (length $ filter (/=(0::Int)) $ toList $ ptSum xs) <= 1 || any (== (-1)) xs -- overflow
 
     triples _ [] = []
-    triples ref (_cnt:bases:_quals:rest) = let this = parse ref (C 0 []) (B.map toUpper bases) 
-                                                      in this `seq` this : triples ref rest
+    triples ref (cnt:bases:_quals:rest) = let overflow = case B.readInt cnt of 
+                                                Just (c,_) -> c>=maxct
+                                                Nothing    -> error ("Coverage count is not an int: "++show cnt)
+                                              this = parse ref (C 0 []) (B.map toUpper bases) 
+                                          in if overflow then C (-1) [] : triples ref rest
+                                             else this `seq` this : triples ref rest
     triples _ _ = error "triples: incorrect number of columns"
     
     -- note: does not (yet) deal with '<' and '>', which apparently can occur

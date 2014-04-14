@@ -17,7 +17,7 @@ main = do
     then proc_fused o lns -- faster?
     else do
       -- seems faster for few CPUs?
-      let comb = showPile' o . readPile1
+      let comb = showPile' o . readPile1 32000
       recs <- if threads o > 1 then parMap (threads o) comb lns 
               else return $ map comb lns
       run_procs o recs

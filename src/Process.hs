@@ -17,10 +17,10 @@ import Control.Concurrent
 proc_fused :: Options -> [BL.ByteString] -> IO ()
 proc_fused o (l:ls) = do
   outh <- if null (output o) || output o == "-" then return stdout else openFile (output o) WriteMode
-  B.hPutStr outh $ gen_header o $ readPile1 l
+  B.hPutStr outh $ gen_header o $ readPile1 32000 l
   if threads o > 1 
-    then mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1) (l:ls)
-    else mapM_ (B.hPutStr outh) $ map (showPile o . readPile1) (l:ls)
+    then mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1 32000) (l:ls)
+    else mapM_ (B.hPutStr outh) $ map (showPile o . readPile1 32000) (l:ls)
   hClose outh
 proc_fused _ [] = error "No input?"
 
