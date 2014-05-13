@@ -1,51 +1,67 @@
 -- High performance counting data structure
 
-module Count (Counts(..), getcounts
+module Count (Counts(..)
+             , addA, addC, addG, addT, addV
+             , addA_, addC_, addG_, addT_                                       
              , getA, getC, getG, getT
-             , addA, addC, addG, addT
              , covC, ptAdd, ptSum
              , toList, sumList 
-             , Int64) where
+             ) where
 
 import Variants       
-       
 import Data.Int
-import Data.Bits
 import Data.List (foldl1')
 
-data Counts = C {-# UNPACK #-} !Int64 [Variant]
+data Counts = C { getA_, getC_, getG_, getT_ :: {-# UNPACK #-} !Int32
+                , getV :: ![Variant]
+                }
 
-getcounts :: Counts -> Int64
-getcounts (C cs _) = cs
+getA, getC, getG, getT :: Integral i => Counts -> i
+getA = fromIntegral . getA_
+getC = fromIntegral . getC_
+getG = fromIntegral . getG_
+getT = fromIntegral . getT_
+{-# INLINE getA #-}
+{-# INLINE getC #-}
+{-# INLINE getG #-}
+{-# INLINE getT #-}
 
-getA, getC, getG, getT :: Int64 -> Int
-getA = flip shiftR 48 .fromIntegral . (.&.) 0xFFFF000000000000 
-getC = flip shiftR 32 . fromIntegral . (.&.) 0xFFFF00000000 
-getG = flip shiftR 16 . fromIntegral . (.&.) 0xFFFF0000 
-getT = fromIntegral . (.&.) 0xFFFF
+addA, addC, addG, addT :: Integral i => Counts -> i -> Counts
+addA c i = c { getA_ = getA_ c + fromIntegral i }
+addC c i = c { getC_ = getC_ c + fromIntegral i }
+addG c i = c { getG_ = getG_ c + fromIntegral i }
+addT c i = c { getT_ = getT_ c + fromIntegral i }
+{-# INLINE addA #-}
+{-# INLINE addC #-}
+{-# INLINE addG #-}
+{-# INLINE addT #-}
 
-addA, addC, addG, addT :: Int64 -> Int -> Int64
-addA c i = c + fromIntegral (i `shiftL` 48)
-addC c i = c + fromIntegral (i `shiftL` 32)
-addG c i = c + fromIntegral (i `shiftL` 16)
-addT c i = c + fromIntegral i
+addA_, addC_, addG_, addT_ :: Counts -> Int32 -> Counts
+addA_ c i = c { getA_ = getA_ c + i }
+addC_ c i = c { getC_ = getC_ c + i }
+addG_ c i = c { getG_ = getG_ c + i }
+addT_ c i = c { getT_ = getT_ c + i }
 
-covC :: Int64 -> Int
-covC c = getA c + getC c + getG c + getT c
 
-ptAdd :: Int64 -> Int64 -> Int64
-ptAdd a b = a `addA` (getA b) `addC` (getC b) `addG` (getG b) `addT` (getT b)
+addV :: Counts -> Variant -> Counts
+addV c v = c { getV = v : getV c }
+{-# INLINE addV #-}
 
-ptSum :: [Int64] -> Int64
+covC :: Counts -> Int
+covC c = fromIntegral (getA_ c + getC_ c + getG_ c + getT_ c)
+
+ptAdd :: Counts -> Counts -> Counts
+ptAdd a b = a `addA` (getA_ b) `addC` (getC_ b) `addG` (getG_ b) `addT` (getT_ b)
+
+ptSum :: [Counts] -> Counts
 ptSum = foldl1' ptAdd
 
 -- Convert 'Counts' to a list of allele counts
-toList :: Num a => Int64 -> [a]
-toList x = map fromIntegral [getA x,getC x,getG x,getT x]
-{-# DEPRECATED toList "use covC and sumC" #-}
+toList :: Num a => Counts -> [a]
+toList x = map fromIntegral [getA_ x,getC_ x,getG_ x,getT_ x]
 
 -- | Pointwise summation of the input lists
 sumList :: Num a => [[a]] -> [a]
 sumList = foldr (zipWith (+)) [0,0,0,0]
-{-# DEPRECATED sumList "use covC instead" #-}
+{-# DEPRECATED sumList "use ptSum" #-}
 

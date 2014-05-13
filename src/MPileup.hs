@@ -14,16 +14,16 @@ data MPileRecord = MPR { ignore :: !Bool
                        }
 
 -- convert counts to major/non-major allele counts
-by_major_allele :: [Counts] -> [[Int]] -- always length 2
+by_major_allele :: [Counts] -> [(Int,Int)] -- always length 2
 by_major_allele cs = let
-  ls = map (toList . getcounts) cs
-  s  = sumList ls
+  ls = map toList cs
+  s  = toList $ ptSum cs :: [Int]
   Just i = elemIndex (maximum s) s
-  in map (\l -> [l!!i,sum l-l!!i]) ls
+  in map (\l -> (l!!i,sum l-l!!i)) ls
 
 -- pick out major allele in first count, and output number of same/different
 major_allele :: Counts -> Counts -> ((Int,Int),(Int,Int))
-major_allele (C x _) (C y _) =
+major_allele x y =
   let s1 = toList x
       s2 = toList y
       m = maximum s1
@@ -32,8 +32,8 @@ major_allele (C x _) (C y _) =
 
 -- count major allele in first sample
 -- return flag whether informative, chrom, pos, ref, 
-readPile1 :: Int -> B.ByteString -> MPileRecord 
-readPile1 maxct = parse1 . B.split '\t'  -- later samtools sometimes outputs empty strings in columns
+readPile1 :: B.ByteString -> MPileRecord 
+readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty strings in columns
   where
     parse1 (chr:pos:r:rest) = let trs = triples ref rest
                                   ref = B.head r
@@ -41,50 +41,42 @@ readPile1 maxct = parse1 . B.split '\t'  -- later samtools sometimes outputs emp
     parse1 xs = error ("parse1: insufficiently long line:"++show xs)
     
     -- set the ignore flag if we only see one or zero alleles    
-    ign cs = let xs = map getcounts cs
-             in (length $ filter (/=(0::Int)) $ toList $ ptSum xs) <= 1 || any (== (-1)) xs -- overflow
+    ign xs = (length $ filter (/=(0::Int)) $ toList $ ptSum xs) <= 1
 
     triples _ [] = []
-    triples ref (cnt:bases:_quals:rest) = let overflow = case B.readInt cnt of 
-                                                Just (c,_) -> c>=maxct
-                                                Nothing    -> error ("Coverage count is not an int: "++show cnt)
-                                              this = parse ref (C 0 []) (B.map toUpper bases) 
-                                          in if overflow then C (-1) [] : triples ref rest
-                                             else this `seq` this : triples ref rest
+    triples ref (_cnt:bases:_quals:rest) = let this = parse ref (C 0 0 0 0 []) (B.map toUpper bases) 
+                                           in this `seq` this : triples ref rest
     triples _ _ = error "triples: incorrect number of columns"
     
     -- note: does not (yet) deal with '<' and '>', which apparently can occur
     -- perhaps it would be faster to do this as a sequence of BS ops, which would fuse?
     parse :: Char -> Counts ->  B.ByteString -> Counts
     parse ref !cts bs = case B.uncons bs of
-      Nothing -> cts
-      Just (c_,str_) -> p c_ str_
+        Nothing -> cts
+        Just (c_,str_) -> p c_ str_
         where p !c !str 
-                | c == '.' || c == ',' = parse ref (add cts ref) str
-                | c == '^'             = parse ref (add cts ref) $ B.drop 1 str
-                | c == '*' || c == '$' = parse ref cts str
+                | c == '.' || c == ',' = parse ref (addRef cts 1) str
+                | c == 'A'             = parse ref (addA_ cts 1) str
+                | c == 'C'             = parse ref (addC_ cts 1) str
+                | c == 'G'             = parse ref (addG_ cts 1) str
+                | c == 'T'             = parse ref (addT_ cts 1) str
+                | c == 'N'             = parse ref cts str                                         
+                | c == '^'             = parse ref (addRef cts 1) $ B.drop 1 str
+                | c == '*' || c == '$' = parse ref cts str  -- * is a deletion, also reported as variant...
                 | c == '-' || c == '+' = let Just (cnt,rest) = B.readInt str
                                              var = (if c=='+' then Ins else Del) (B.unpack $ B.take (fromIntegral cnt) rest)
-                                         in parse ref (addvar cts var) (B.drop (fromIntegral cnt) rest)
-                | otherwise            = parse ref (add cts c) str
-              
-              add (C x vs) 'A' = (C (addA x 1) vs)
-              add (C x vs) 'C' = (C (addC x 1) vs)
-              add (C x vs) 'G' = (C (addG x 1) vs)
-              add (C x vs) 'T' = (C (addT x 1) vs)
-              add c 'N' = c
-              add _ n = error ("Not a nucleotide: "++show n)
-              addvar (C x vs) v = (C x (v:vs))
+                                         in parse ref (addV cts var) (B.drop (fromIntegral cnt) rest)
+                | otherwise            = error ("Not a nucleotide: "++show c)
+              addRef = case ref of { 'A' -> addA_; 'C' -> addC_; 'G' -> addG_; 'T' -> addT_; 'N' -> const }
 
 -- | Show SNP counts and coverage
 showC :: Counts -> (String,Int)
-showC (C x _) = (" "++(intercalate ":" $ map show (toList x :: [Int])),covC x)
+showC x = (" "++(intercalate ":" $ map show (toList x :: [Int])),covC x)
 
 -- | Show structural variant count
 showV :: [Counts] -> String
 showV cs = let
-  getv (C _ v) = v
-  vs = nub $ concatMap getv cs
+  vs = nub $ concatMap getV cs
   countV :: Variant -> Counts -> Int
-  countV v c = length . filter (==v) $ getv c
+  countV v c = length . filter (==v) $ getV c
   in intercalate "\t" (show vs:[unwords $ map (\v -> show $ countV v c) vs | c <- cs])

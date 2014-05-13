@@ -17,10 +17,10 @@ import Control.Concurrent
 proc_fused :: Options -> [BL.ByteString] -> IO ()
 proc_fused o (l:ls) = do
   outh <- if null (output o) || output o == "-" then return stdout else openFile (output o) WriteMode
-  B.hPutStr outh $ gen_header o $ readPile1 32000 l
+  B.hPutStr outh $ gen_header o $ readPile1 l
   if threads o > 1 
-    then mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1 32000) (l:ls)
-    else mapM_ (B.hPutStr outh) $ map (showPile o . readPile1 32000) (l:ls)
+    then mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1) (l:ls)
+    else mapM_ (B.hPutStr outh) $ map (showPile o . readPile1) (l:ls)
   hClose outh
 proc_fused _ [] = error "No input?"
 
@@ -183,7 +183,7 @@ showPile o mpr = if suppress o && ignore mpr then B.empty else (B.concat
           [ default_out mpr
           , when (Options.f_st o) (printf "\t%.3f" (Metrics.f_st $ counts mpr))
           , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k $ counts mpr))
-          , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele $ counts mpr))
+--        , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele $ counts mpr))
           , when (Options.conf o) (conf_all $ counts mpr)
           , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all 2.326 $ counts mpr))
           , when (Options.variants o) ("\t"++showV (counts mpr))

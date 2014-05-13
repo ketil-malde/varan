@@ -12,7 +12,7 @@ import Data.List (foldl1')
 --   similar to `dist`, but from 1 (equal) to 0 (orthogonal)
 angle :: Counts -> Counts -> Double
 angle c1' c2' = let
-  (c1,c2) = (toList $ getcounts c1', toList $ getcounts c2')
+  (c1,c2) = (toList c1', toList c2')
   vnorm = sqrt . sum . map ((**2))
   in sum $ zipWith (*) (map (/vnorm c1) c1) (map (/vnorm c2) c2)
 
@@ -23,17 +23,17 @@ ppi_params [] = []
 
 -- calculate diversity within and between sample pairs
 fst_params :: [Counts] -> [[(Double,Double)]]
-fst_params (x:xs) = go $ map getcounts (x:xs)
+fst_params (x:xs) = go (x:xs)
   where go (y:ys) = map (heteroz $ y) ys : go ys
         go [] = []
 fst_params [] = []
 
-heteroz :: Int64 -> Int64 -> (Double,Double)
+heteroz :: Counts -> Counts -> (Double,Double)
 heteroz c1 c2 = let
   c1s = fromIntegral $ covC c1
   c2s = fromIntegral $ covC c2
   total = c1s + c2s
-  hz x = 1 - fromIntegral (sq (getA x) + sq (getC x) + sq (getG x) + sq (getT x))/fromIntegral (sq $ covC x) where sq z = z*z
+  hz x = 1 - fromIntegral (sq (getA x::Int) + sq (getC x) + sq (getG x) + sq (getT x))/fromIntegral (sq $ covC x) where sq z = z*z
   h_tot = hz (c1 `ptAdd` c2)
   h_subs = (hz c1*c1s + hz c2*c2s)/total
   in if c1s == 0 || c2s == 0 || h_tot == 0.0 then (0,0) 
@@ -47,17 +47,15 @@ heteroz_ c1 c2 = let
   hz :: [Double] -> Double
   hz xs' = let s = sum xs' in 1 - sum (map ((**2) . (/s)) xs')
   h_tot, h_subs :: Double
+
   h_tot = hz $ zipWith (+) c1 c2
   h_subs = (hz c1*c1s + hz c2*c2s)/total
   in if c1s == 0 || c2s == 0 || h_tot == 0 then (0,0) 
      else (h_tot,h_subs)
 
 f_st :: [Counts] -> Double
-f_st = f_st' . map getcounts
-
-f_st' :: [Int64] -> Double
-f_st' xs = let
-  hz x = 1 - fromIntegral (sq (getA x) + sq (getC x) + sq (getG x) + sq (getT x))/fromIntegral (sq $ covC x) where sq z = z*z
+f_st xs = let
+  hz x = 1 - fromIntegral (sq (getA x::Int) + sq (getC x) + sq (getG x) + sq (getT x))/fromIntegral (sq $ covC x) where sq z = z*z
   h_subs, weights :: [Double]
   h_tot = hz (ptSum xs)
   h_subs = map hz xs
@@ -68,7 +66,7 @@ f_st' xs = let
 -- | Calculate F_ST
 f_st_ :: [Counts] -> Double
 f_st_ cs = let
-  cs' = map (toList . getcounts) cs
+  cs' = map toList cs
   -- hm, er ikke dette bare nuc div?
   hz :: [Double] -> Double
   hz xs' = let s = sum xs'
@@ -91,21 +89,18 @@ f_st_ cs = let
 -- also is indifferent to the actual counts, so reliability depends on coverage.
 
 pi_k :: [Counts] -> Double
-pi_k = pi_k' . map getcounts
-
-pi_k' :: [Int64] -> Double
-pi_k' cs = let fs = map pi_freqs cs
-               c = fromIntegral $ covC $ ptSum $ cs
+pi_k cs = let fs = map pi_freqs cs
+              c = fromIntegral $ covC $ ptSum $ cs
   in if c>1 then c/(c-1)*(1 - (sum $ foldl1' (zipWith (*)) fs)) else 0
 
-pi_freqs :: Int64 -> [Double]
+pi_freqs :: Counts -> [Double]
 pi_freqs x = let s = fromIntegral $ covC x
-             in [fromIntegral (getA x)/s,fromIntegral (getC x)/s,fromIntegral (getG x)/s,fromIntegral (getT x)/s]
+             in [fromIntegral (getA_ x)/s,fromIntegral (getC_ x)/s,fromIntegral (getG_ x)/s,fromIntegral (getT_ x)/s]
 
 -- Or, equivalent
 pi_k_alt :: [Counts] -> Double
 pi_k_alt cs' = let
-  cs = map (toList . getcounts) cs'
+  cs = map toList cs'
   no_diff = sum $ foldr1 (zipWith (*)) cs
   all_pairs = product $ map sum cs
   in (all_pairs - no_diff) / all_pairs
@@ -124,7 +119,7 @@ pearsons_chi² t = let
 -- | Use AgrestiCoull to calculate significant differences between
 --   allele frequency spectra
 conf :: Counts -> Counts -> String
-conf (C x _v1) (C y _v2) = let
+conf x y = let
   s1 = covC x  -- don't count structural variants
   s2 = covC y
   in [overlap (getA x,s1-getA x) (getA y,s2-getA y)
@@ -146,13 +141,19 @@ overlap (succ1,fail1) (succ2,fail2) =
 
 -- | Use AgrestiCoull to calculate significant difference from
 --   a combined distribution, with error.
+-- FIXME: use an error threshold min dist between major allele frequency conf intervals
 conf_all :: [Counts] -> String
 conf_all cs' = let
   -- attempt to smooth errors by subtracting one, seems to work:
-  m x = max (x-1) 0
-  rm_err (C x _) = C (0 `addA` (m $ getA x) `addC` (m $ getC x) `addG` (m $ getG x) `addT` (m $ getT x)) []
-  in concat ["\t"++x | x <- map (conf (C (ptSum $ map getcounts cs') []) . rm_err) cs']
+  -- m x = max (x-1) 0
+  -- rm_err x = C (0 `addA` (m $ getA x) `addC` (m $ getC x) `addG` (m $ getG x) `addT` (m $ getT x)) []
+  in concat ["\t"++x | x <- map (conf (ptSum cs')) cs']
 
+dsconf_pairs :: Double -> [Counts] -> String
+dsconf_pairs e cs = go $ by_major_allele cs
+  where go (x:xs) = " " ++ map (ds x) xs ++ go xs
+        go [] = ""
+        ds x y = if delta_sigma 2.326 x y > e then '*' else if delta_sigma 1.65 x y > e then '+' else '.'                                                                                                           
 -- | Calculate distance (in absolute numbers) between confidence intervals 
 --   with the given z-score
 delta_sigma :: Double -> (Int,Int) -> (Int,Int) -> Double
@@ -169,8 +170,8 @@ delta_sigma z (s1,f1) (s2,f2) =
 ds_all :: Double -> [Counts] -> [Double]
 ds_all sig counts = let
   xs = by_major_allele counts
-  (bs,bf) = (sum (map head xs), sum (map last xs))
-  pairs = [((s,f),(bs-s,bf-f)) | [s,f] <- xs ]
+  (bs,bf) = (sum (map fst xs), sum (map snd xs))
+  pairs = [((s,f),(bs-s,bf-f)) | (s,f) <- xs ]
   in map (uncurry (delta_sigma sig)) pairs
 
 -- | Calculate distance between approximate distributions
