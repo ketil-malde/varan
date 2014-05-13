@@ -34,8 +34,8 @@ run_procs o recs@(M r1 _:_) = do
   B.hPutStr outh $ gen_header o r1
   (gi,gfin) <- start_proc proc_gpi
                (\x -> putStrLn ("Global pi_k (nucleotide diversity): "++show x++"\n"))
-  (ppi,pfin) <- start_proc proc_gppi out_gppi
-  (fi,ffin) <- start_proc proc_gfst out_gfst
+  (ppi,pfin) <- start_proc (proc_gppi o) out_gppi
+  (fi,ffin) <- start_proc (proc_gfst o) out_gfst
   let run (M r s:rs) = do
         push_procs (Just r) [gi,ppi,fi]
         B.hPutStr outh s
@@ -79,11 +79,13 @@ proc_gpi = proc_fold 0.0 f
           in if ignore mpr || isNaN p then cur else cur+p
 
 -- | Collect variation within and between for global pairwise Fst
-proc_gfst :: MVar (Maybe MPileRecord) -> MVar [[(Double, Double)]] -> IO ()
-proc_gfst = proc_fold zero f
+proc_gfst :: Options -> MVar (Maybe MPileRecord) -> MVar [[(Double, Double)]] -> IO ()
+proc_gfst o = proc_fold zero f
   where f (MPR sup _ _ _ cts) cur =
           let new = Metrics.fst_params cts
-          in if sup then cur else deepSeq $ zipWith (zipWith plus) cur new
+              cov = sum $ map covC cts
+          in if sup || (max_cov o > 0 && cov > max_cov o) || cov < min_cov o 
+             then cur else deepSeq $ zipWith (zipWith plus) cur new
         zero = repeat (repeat (0,0))
         plus (a,c) (b,d) = (a+b,c+d)
         deepSeq x | x == x = x
@@ -108,18 +110,18 @@ add_uv :: UniVar -> Double -> UniVar
 add_uv (UV c s s2) d = UV (c+1) (s+d) (s2+d*d)
 
 -- | Collect nucleotide diversity within and between for global pairwise ND (pi)
-proc_gppi :: MVar (Maybe MPileRecord) -> MVar (UniVar,[[Double]]) -> IO ()
-proc_gppi = proc_fold zero f
+proc_gppi :: Options -> MVar (Maybe MPileRecord) -> MVar (UniVar,[[Double]]) -> IO ()
+proc_gppi o = proc_fold zero f
   where f (MPR sup _ _ _ cts) (uv,cur) =
           let new = Metrics.ppi_params cts
-              cov = fromIntegral $ sum $ map (covC . getcounts) cts
-              nu = add_uv uv cov
-              nc = if sup then cur else deepSeq $ zipWith (zipWith plus) cur new 
-          in nu `seq` nc `seq` (nu,nc )
+              cov = sum $ map covC cts
+              nu = add_uv uv $ fromIntegral cov
+              nc = if sup || (max_cov o > 0 && cov > max_cov o) || cov < min_cov o 
+                   then cur else deepSeq $ zipWith (zipWith plus) cur new 
+          in nu `seq` nc `seq` (nu,nc)
         zero = (UV 0 0 0, repeat (repeat 0))
         plus a b = if isNaN b then a else a+b
         deepSeq x | x == x = x
-
 
 -- | Calculate and print global pairwise ND
 --   Todo: divide by genome size        
@@ -165,6 +167,7 @@ gen_header o (MPR _ _ _ _ cs) = B.pack $ concat [
   ,if Options.pi_k o then "\tPi_k" else ""
   ,if Options.chi2 o then "\tChi²" else ""
   ,if Options.conf o then concat ["\tCI "++show n | n <- [1..(length cs)]] else ""
+  ,if Options.pconf o then "\tpconf" else ""
   ,if Options.ds o then "\tdelta-sigma" else ""
   ,if Options.variants o then "\tVariants" else ""
   ,"\n"  
@@ -185,6 +188,7 @@ showPile o mpr = if suppress o && ignore mpr then B.empty else (B.concat
           , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k $ counts mpr))
 --        , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele $ counts mpr))
           , when (Options.conf o) (conf_all $ counts mpr)
+          , when (Options.pconf o) ("\t"++dsconf_pairs 0.01 (counts mpr))
           , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all 2.326 $ counts mpr))
           , when (Options.variants o) ("\t"++showV (counts mpr))
           , B.pack "\n"

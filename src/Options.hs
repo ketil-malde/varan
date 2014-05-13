@@ -10,10 +10,11 @@ import System.IO
 
 data Options = Opts 
   { suppress, variants
-  , chi2, f_st, pi_k, conf, ds :: Bool
+  , chi2, f_st, pi_k, conf, ds, pconf :: Bool
   , input, output :: FilePath
   , global :: Bool
   , threads :: Int
+    , min_cov, max_cov :: Int
   } deriving (Typeable,Data)
 
 defopts :: Options
@@ -27,8 +28,11 @@ defopts = Opts
   , f_st   = False &= help "estimate F_st" &= name "fst"
   , pi_k   = False &= help "estimate Pi_k"  
   , conf   = False &= help "check if major allele frequency confidence intervals overlap"
+  , pconf  = False &= help "pairwise major allele confidence"
   , ds     = False &= help "output distance between major allele frequency confidence intervals"
   , threads = 100 &= help "queue lenght for parallel execution"
+  , min_cov = 0     &= help "minimum coverage to include"
+  , max_cov = 32000 &= help "maximum coverage to include"
   , input  = [] &= args &= typFile
   } &= program "varan"
     &= summary "Identify genetic variants from pooled sequences."
