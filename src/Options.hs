@@ -10,7 +10,7 @@ import System.IO
 
 data Options = Opts 
   { suppress, variants
-  , chi2, f_st, pi_k, conf, ds, pconf :: Bool
+  , chi2, f_st, pi_k, conf, ds, esiv, pconf :: Bool
   , input, output :: FilePath
   , global :: Bool
   , threads :: Int
@@ -30,6 +30,7 @@ defopts = Opts
   , conf   = False &= help "check if major allele frequency confidence intervals overlap"
   , pconf  = False &= help "pairwise major allele confidence"
   , ds     = False &= help "output distance between major allele frequency confidence intervals"
+  , esiv   = False &= help "output expected site information value for SNPs"
   , threads = 100 &= help "queue lenght for parallel execution"
   , min_cov = 0     &= help "minimum coverage to include"
   , max_cov = 32000 &= help "maximum coverage to include"
