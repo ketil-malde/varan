@@ -67,7 +67,7 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
                                              var = (if c=='+' then Ins else Del) (B.unpack $ B.take (fromIntegral cnt) rest)
                                          in parse ref (addV cts var) (B.drop (fromIntegral cnt) rest)
                 | otherwise            = error ("Not a nucleotide: "++show c)
-              addRef = case ref of { 'A' -> addA_; 'C' -> addC_; 'G' -> addG_; 'T' -> addT_; 'N' -> const }
+              addRef = case ref of { 'A' -> addA_; 'C' -> addC_; 'G' -> addG_; 'T' -> addT_; _ -> const }
 
 -- | Show SNP counts and coverage
 showC :: Counts -> (String,Int)
