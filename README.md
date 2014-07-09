@@ -12,7 +12,7 @@ First you need to align your pooled reads into one BAM-file each, say
 Basically, you should be able to get away with something like:
 
 ~~~~~~
-samtools mpileup -f ref.fasta sample1.bam sample2.bam sample3.bam | varan > OUT
+samtools mpileup -f ref.fasta sample1.bam sample2.bam sample3.bam | varan [options] > OUT
 ~~~~~~
 
 The output from `samtools pileup` looks something like this:
@@ -57,6 +57,10 @@ LSalAtl2s1      162     T        0 0 0 18        0 0 0 19       -       ....    
 LSalAtl2s1      163     G        0 0 18 0        0 0 19 0       -       ....    1.000   0.000   0.000   0.02    []              
 
 ~~~~~~
+
+*NOTE*: This is a bit out of date, and describes deprecated or
+unfinished features.  Use as an example of output format only, not as
+a recommendation of statistics to use!
 
 Here we see that each input library (i.e. BAM file) has had the allele frequencies counted
 up as the number of As, Cs, Gs, and Ts for each position.  Note that a
