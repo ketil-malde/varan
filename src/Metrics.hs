@@ -155,7 +155,8 @@ dsconf_pairs e cs = go $ by_major_allele cs
         go [] = ""
         ds x y = if delta_sigma 2.326 x y > e then '*' else if delta_sigma 1.65 x y > e then '+' else '.'                                                                                                           
 -- | Calculate distance (in absolute numbers) between confidence intervals 
---   with the given z-score
+--   with the given z-score.  This is overly conservative, and it is better to
+--   use wald or wald_p below (or some more complex method, like Newcomb).
 delta_sigma :: Double -> (Int,Int) -> (Int,Int) -> Double
 delta_sigma z (s1,f1) (s2,f2) =
   let (i1,j1) = confidenceInterval z s1 f1
@@ -173,6 +174,22 @@ ds_all sig counts = let
   (bs,bf) = (sum (map fst xs), sum (map snd xs))
   pairs = [((s,f),(bs-s,bf-f)) | (s,f) <- xs ]
   in map (uncurry (delta_sigma sig)) pairs
+
+-- | Wald intervals with pseudocounts
+--   See Agresti and Caffo, 2000.
+wald_p :: Double -> (Int, Int) -> (Int, Int) -> Double
+wald_p z (s1,f1) (s2,f2) = wald z (s1+1,f1+1) (s2+1,f2+1)
+
+-- | Calculate lower bound of Wald confidence interval for difference between frequencies
+wald :: Double -> (Int, Int) -> (Int, Int) -> Double
+wald z (s1,f1) (s2,f2) = let
+  -- estimated success frequencies
+  (//) x y = fromIntegral x / fromIntegral y
+  n1 = s1+f1
+  n2 = s2+f2
+  p1 = s1//n1
+  p2 = s2//n2
+  in abs (p1-p2) - z*sqrt ((s1*f1)//(n1*n1*n1)+(s2*f2)//(n2*n2*n2))
 
 -- | Calculate distance between approximate distributions
 -- in terms of their standard deviation.  Perhaps use binomial distribution directly?
