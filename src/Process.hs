@@ -29,6 +29,7 @@ proc_fused _ [] = error "No input?"
 -- | Runs a set of processes, distributes each MPileRecord to them
 --   and runs the finalizer (collecting and outputting the results)  
 run_procs :: Options -> [MPileRecord'] -> IO ()
+run_procs _ [] = putStrLn "No input records found! (Or try: varan --help)"
 run_procs o recs@(M r1 _:_) = do
   -- initialize default output
   let use_stdout = null (output o) || output o == "-"

@@ -4,9 +4,9 @@
   Information value is the log odds for each allele, times the probablity of observing it
   not using any prior (or prior is 50/50)
 
+  Biallelic:
   abs (avg(p1,p2)*log(p1/p2) - (1-avg(p1,p2))*log((1-p1)/(1-p2))
 -}
-
 
 module ESIV where
 

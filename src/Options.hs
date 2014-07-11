@@ -25,8 +25,8 @@ defopts = Opts
   , variants = False &= help "output list of non-SNP variants"
   , global = False &= help "calculate global statistics"
   , chi2   = False &= help "calculate chi² probability" &= ignore
-  , f_st   = False &= help "estimate F_st" &= name "fst"
-  , pi_k   = False &= help "estimate Pi_k"  
+  , f_st   = False &= help "estimate fixation index, F_st" &= name "fst"
+  , pi_k   = False &= help "estimate nucleotide diversity, Pi_k"
   , conf   = False &= help "check if major allele frequency confidence intervals overlap"
   , pconf  = False &= help "pairwise major allele confidence"
   , ds     = False &= help "output distance between major allele frequency confidence intervals"
