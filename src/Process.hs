@@ -172,7 +172,7 @@ gen_header o (MPR _ _ _ _ cs) = B.pack $ concat [
   ,if Options.conf o then concat ["\tCI "++show n | n <- [1..(length cs)]] else ""
   ,if Options.pconf o then "\tpconf" else ""
   ,if Options.ds o then "\tdelta-sigma" else ""
-  ,if Options.esiv o then "\tESIV" else ""
+  ,if Options.esi  o then "\tESI" else ""
   ,if Options.variants o then "\tVariants" else ""
   ,"\n"  
   ]
@@ -194,7 +194,8 @@ showPile o mpr = if suppress o && ignore mpr then B.empty else (B.concat
           , when (Options.conf o) (conf_all $ counts mpr)
           , when (Options.pconf o) ("\t"++dsconf_pairs 0.01 (counts mpr))
           , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all 2.326 $ counts mpr))
-          , when (Options.esiv o) ("\t"++concat [ concat [printf " %2.2f" (ESIV.esiv 1.64 0.01 c1 c2) | c2 <- rest] | (c1:rest) <- Data.List.tails (counts mpr)])
+          , when (Options.esi o) ("\t"++concat [ concat [printf " %2.2f" (ESIV.esiv 1.64 0.01 c1 c2) | c2 <- rest] | (c1:rest) <- Data.List.tails (counts mpr)])
+--          , when (Options.mafci o) ("\t"++concat counts mpr)...something
           , when (Options.variants o) ("\t"++showV (counts mpr))
           , B.pack "\n"
           ])

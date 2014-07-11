@@ -10,7 +10,7 @@ import System.IO
 
 data Options = Opts 
   { suppress, variants
-  , chi2, f_st, pi_k, conf, ds, esiv, pconf :: Bool
+  , chi2, f_st, pi_k, conf, ds, esi, pconf :: Bool
   , input, output :: FilePath
   , global :: Bool
   , threads :: Int
@@ -19,27 +19,35 @@ data Options = Opts
 
 defopts :: Options
 defopts = Opts 
-  { -- mode = Default &= help "mode of operation"
+  { 
+  -- General parameters
     output = "" &= help "output file name" &= typFile
   , suppress = False &= help "omit non-variant lines from output"
   , variants = False &= help "output list of non-SNP variants"
-  , global = False &= help "calculate global statistics"
-  , chi2   = False &= help "calculate chi² probability" &= ignore
-  , f_st   = False &= help "estimate fixation index, F_st" &= name "fst"
-  , pi_k   = False &= help "estimate nucleotide diversity, Pi_k"
-  , conf   = False &= help "check if major allele frequency confidence intervals overlap"
-  , pconf  = False &= help "pairwise major allele confidence"
-  , ds     = False &= help "output distance between major allele frequency confidence intervals"
-  , esiv   = False &= help "output expected site information value for SNPs"
   , threads = 100 &= help "queue lenght for parallel execution"
   , min_cov = 0     &= help "minimum coverage to include"
   , max_cov = 32000 &= help "maximum coverage to include"
   , input  = [] &= args &= typFile
+  
+  , global = False &= help "calculate global statistics"
+
+  -- Overall statistics
+  , chi2   = False &= help "calculate chi² probability" &= ignore
+  , f_st   = False &= help "estimate fixation index, F_st" &= name "fst"
+  , pi_k   = False &= help "estimate nucleotide diversity, Pi_k"
+
+  -- Per sample statistics (vs. pool of all populations)
+  , conf   = False &= help "check if major allele frequency confidence intervals overlap" -- uses conf_all (for each allele)
+  , pconf  = False &= help "pairwise major allele confidence"                             -- uses dsconf_pairs (by major allele)
+  , ds     = False &= help "output distance between major allele frequency confidence intervals" -- uses ds_all (by major allele)
+
+  -- Statistics for all sample pairs
+  , esi    = False &= help "output conservative expected site information for SNPs using Agresti-Coull intervals"
   } &= program "varan"
     &= summary "Identify genetic variants from pooled sequences."
     &= details ["Examples:",""
                ,"Read input from a pipe, calculate site-wise Fst and confidence intervals, ignoring non-variant sites:",""
-               ,"  samtools mpileup -f ref.fasta | varan --fst --conf -s -o snps.txt",""
+               ,"  samtools mpileup -f ref.fasta reads.bam | varan --fst --conf -s -o snps.txt",""
                ,"Read input from a file, send the site-wise output to /dev/null, and only output global statistics to standard output:",""
                ,"  varan --global -o /dev/null input.mpile",""
                ]    
