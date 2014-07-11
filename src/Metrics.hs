@@ -194,10 +194,10 @@ wald z (s1,f1) (s2,f2) = let
 -- | Calculate distance between approximate distributions
 -- in terms of their standard deviation.  Perhaps use binomial distribution directly?
 -- This is a z-score, i.e. score of 2 means that the 95% CIs barely overlap.
-ci_dist :: (Int,Int) -> (Int,Int) -> Double
-ci_dist (s1,f1) (s2,f2) =
-  let (i1,j1) = confidenceInterval 1.0 s1 f1
-      (i2,j2) = confidenceInterval 1.0 s2 f2
+ci_dist :: Double -> (Int,Int) -> (Int,Int) -> Double
+ci_dist z (s1,f1) (s2,f2) =
+  let (i1,j1) = confidenceInterval z s1 f1
+      (i2,j2) = confidenceInterval z s2 f2
       mu1 = i1+j1 -- all values are times two (so it cancels out)
       mu2 = i2+j2
       sd1 = j1-i1
