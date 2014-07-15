@@ -10,7 +10,7 @@ import System.IO
 
 data Options = Opts 
   { suppress, variants
-  , chi2, f_st, pi_k, conf, ds, esi, pconf :: Bool
+  , chi2, f_st, pi_k, conf, ds, dsw, esi, pconf  :: Bool
   , input, output :: FilePath
   , global :: Bool
   , threads :: Int
@@ -39,17 +39,19 @@ defopts = Opts
   -- Per sample statistics (vs. pool of all populations)
   , conf   = False &= help "check if major allele frequency confidence intervals overlap" -- uses conf_all (for each allele)
   , pconf  = False &= help "pairwise major allele confidence"                             -- uses dsconf_pairs (by major allele)
-  , ds     = False &= help "output distance between major allele frequency confidence intervals" -- uses ds_all (by major allele)
+  , ds     = False &= help "distance between major allele frequency confidence intervals, using Agresti-Coull" -- uses ds_all (by major allele)
+  , dsw    = False &= help "lower bound for distance between major allele frequencies, using Wald"
 
   -- Statistics for all sample pairs
   , esi    = False &= help "output conservative expected site information for SNPs using Agresti-Coull intervals"
-  } &= program "varan"
-    &= summary "Identify genetic variants from pooled sequences."
-    &= details ["Examples:",""
-               ,"Read input from a pipe, calculate site-wise Fst and confidence intervals, ignoring non-variant sites:",""
-               ,"  samtools mpileup -f ref.fasta reads.bam | varan --fst --conf -s -o snps.txt",""
-               ,"Read input from a file, send the site-wise output to /dev/null, and only output global statistics to standard output:",""
-               ,"  varan --global -o /dev/null input.mpile",""
+  }
+  &= program "varan"
+  &= summary "Identify genetic variants from pooled sequences."
+  &= details ["Examples:", ""
+             ,"Read input from a pipe, calculate site-wise Fst and confidence intervals, ignoring non-variant sites:"
+             ,"", "  samtools mpileup -f ref.fasta reads.bam | varan --fst --conf -s -o snps.txt", ""
+             ,"Read input from a file, send the site-wise output to /dev/null, and only output global statistics to standard output:"
+             ,"", "  varan --global -o /dev/null input.mpile", ""
                ]    
 
 getArgs :: IO (IO BL.ByteString,Options)

@@ -171,7 +171,8 @@ gen_header o (MPR _ _ _ _ cs) = B.pack $ concat [
   ,if Options.chi2 o then "\tChi²" else ""
   ,if Options.conf o then concat ["\tCI "++show n | n <- [1..(length cs)]] else ""
   ,if Options.pconf o then "\tpconf" else ""
-  ,if Options.ds o then "\tdelta-sigma" else ""
+  ,if Options.ds o then "\tds-agresti" else ""
+  ,if Options.dsw o then "\tds-wald" else ""
   ,if Options.esi  o then "\tESI" else ""
   ,if Options.variants o then "\tVariants" else ""
   ,"\n"  
@@ -191,16 +192,22 @@ showPile o mpr = if suppress o && ignore mpr then B.empty else (B.concat
           , when (Options.f_st o) (printf "\t%.3f" (Metrics.f_st $ counts mpr))
           , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k $ counts mpr))
 --        , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele $ counts mpr))
+
           , when (Options.conf o) (conf_all $ counts mpr)
           , when (Options.pconf o) ("\t"++dsconf_pairs 0.01 (counts mpr))
           , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all 2.326 $ counts mpr))
-          , when (Options.esi o) ("\t"++concat [ concat [printf " %2.2f" (ESIV.esiv 1.64 0.01 c1 c2) | c2 <- rest] | (c1:rest) <- Data.List.tails (counts mpr)])
---          , when (Options.mafci o) ("\t"++concat counts mpr)...something
+          , when (Options.dsw o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ dsw_all 2.326 $ counts mpr))
+
+          -- Between pairs of samples
+          , when (Options.esi o) (pairwise (ESIV.esiv 1.64 0.01) (counts mpr))
+
           , when (Options.variants o) ("\t"++showV (counts mpr))
           , B.pack "\n"
           ])
   where when p s = if p then B.pack s else B.empty
-        
+        pairwise :: (Counts -> Counts -> Double) -> [Counts] -> String
+        pairwise f cs = "\t"++concat [ concat [printf " %2.2f" (f c1 c2) | c2 <- rest] | (c1:rest) <- Data.List.tails cs]
+
 -- | The default output, with only coverage statistics
 default_out :: MPileRecord -> B.ByteString
 default_out (MPR _ chr pos ref stats) =

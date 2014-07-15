@@ -175,6 +175,14 @@ ds_all sig counts = let
   pairs = [((s,f),(bs-s,bf-f)) | (s,f) <- xs ]
   in map (uncurry (delta_sigma sig)) pairs
 
+-- as above, only using wald_p instead of agresti-coull
+dsw_all :: Double -> [Counts] -> [Double]
+dsw_all sig counts = let
+  xs = by_major_allele counts
+  (bs,bf) = (sum (map fst xs), sum (map snd xs))
+  pairs = [((s,f),(bs-s,bf-f)) | (s,f) <- xs ]
+  in map (uncurry (wald_p sig)) pairs
+
 -- | Wald intervals with pseudocounts
 --   See Agresti and Caffo, 2000.
 wald_p :: Double -> (Int, Int) -> (Int, Int) -> Double
