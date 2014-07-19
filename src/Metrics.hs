@@ -80,6 +80,14 @@ f_st_ cs = let
   in if h_tot == 0 then 0.0 -- no heterozygosity in the population!
      else (h_tot - sum (zipWith (*) h_subs weights)) / h_tot
 
+-- | Calculate nucleotide diversity, the probability that sampling
+-- twice will give you two different results.  Should we correct by
+-- a factor of c/(c-1) here?  Note this gets weird with e.g. allele count of 
+-- 1 and 1 (nd=1, rather than 0.5)
+nd :: Counts -> Double
+nd cs = let fs = pi_freqs cs
+        in 1-sum (zipWith (*) fs fs)
+
 -- | Calculate Pi (my version), the expected number of differences
 -- between two random samples from the populations.  I.e. the
 -- probability that sampling once from each population will not be all

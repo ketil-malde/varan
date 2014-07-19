@@ -10,7 +10,7 @@ import System.IO
 
 data Options = Opts 
   { suppress, variants
-  , chi2, f_st, pi_k, conf, ds, dsw, esi, pconf  :: Bool
+  , chi2, f_st, pi_k, conf, ds, dsw, esi, pconf, nd_all  :: Bool
   , input, output :: FilePath
   , global :: Bool
   , threads :: Int
@@ -41,6 +41,7 @@ defopts = Opts
   , pconf  = False &= help "pairwise major allele confidence"                             -- uses dsconf_pairs (by major allele)
   , ds     = False &= help "distance between major allele frequency confidence intervals, using Agresti-Coull" -- uses ds_all (by major allele)
   , dsw    = False &= help "lower bound for distance between major allele frequencies, using Wald"
+  , nd_all = False &= help "nucleotide diversity (unadjusted), per sample and overall"
 
   -- Statistics for all sample pairs
   , esi    = False &= help "output conservative expected site information for SNPs using Agresti-Coull intervals"
