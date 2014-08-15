@@ -19,6 +19,14 @@ Executable varan
     Build-Depends:   base >= 4 && < 5, random, mtl, parallel, statistics, cmdargs, bytestring
     Ghc-Options:     -rtsopts -Wall -threaded
 
+-- this is just a quick hack, should be merged into the program proper
+Executable vextr
+    Hs-Source-Dirs:  src
+    Main-Is:         VExtr.hs
+    Other-Modules:   MPileup, Count
+    Build-Depends:   base >= 4 && < 5, bytestring
+    Ghc-Options:     -rtsopts -Wall -threaded
+
 -- For parallel execution, we might want to add these, but they
 -- seem to degrade performance on older GHC
 -- Ghc-Options: -threaded -with-rtsopts=-N
