@@ -17,8 +17,9 @@ angle c1' c2' = let
   in sum $ zipWith (*) (map (/vnorm c1) c1) (map (/vnorm c2) c2)
 
 -- Calculate pairwise nucleotide diversities
+-- Not adjusting for coverage
 ppi_params :: [Counts] -> [[Double]]
-ppi_params (c:cs) = map (\x -> pi_k [c,x]) (c:cs) : ppi_params cs
+ppi_params (c:cs) = map (\x -> nd2 c x) (c:cs) : ppi_params cs
 ppi_params [] = []
 
 -- calculate diversity within and between sample pairs
@@ -88,6 +89,13 @@ nd :: Counts -> Double
 nd cs = let fs = pi_freqs cs
         in 1-sum (zipWith (*) fs fs)
 
+-- | Nucleotide diversity between - the probability of selecting
+--   one from each will differ.
+nd2 :: Counts -> Counts -> Double
+nd2 cs1 cs2 = let fs1 = pi_freqs cs1
+                  fs2 = pi_freqs cs2
+              in 1 - sum (zipWith (*) fs1 fs2)
+
 -- | Calculate Pi (my version), the expected number of differences
 -- between two random samples from the populations.  I.e. the
 -- probability that sampling once from each population will not be all
@@ -125,7 +133,7 @@ pearsons_chi² t = let
   in if any (==0) (cols t) || any (==0) (rows t) then 1.0 else complCumulative (chiSquared df) chi
 
 -- | Use AgrestiCoull to calculate significant differences between
---   allele frequency spectra
+--   allele frequency spectra.  Output * or +, depending on significance for each allele.
 conf :: Counts -> Counts -> String
 conf x y = let
   s1 = covC x  -- don't count structural variants
@@ -148,7 +156,7 @@ overlap (succ1,fail1) (succ2,fail2) =
      else '.'
 
 -- | Use AgrestiCoull to calculate significant difference from
---   a combined distribution, with error.
+--   the combined distribution, with error.
 -- FIXME: use an error threshold min dist between major allele frequency conf intervals
 conf_all :: [Counts] -> String
 conf_all cs' = let
