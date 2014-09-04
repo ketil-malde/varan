@@ -188,7 +188,7 @@ showPile' o m = M m (showPile o m)
 
 showPile :: Options -> MPileRecord -> B.ByteString
 showPile _ (MPR _ _ _ _ []) = error "Pileup with no data?"
-showPile o mpr = if suppress o && ignore mpr then B.empty else (B.concat
+showPile o mpr = if suppress o && ignore mpr && (all null (map getV $ counts mpr) || not (variants o)) then B.empty else (B.concat
           [ default_out mpr
           , when (Options.f_st o) (printf "\t%.3f" (Metrics.f_st $ counts mpr))
           , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k $ counts mpr))
