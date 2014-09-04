@@ -1,22 +1,43 @@
+{-# Language DeriveDataTypeable #-}
+
 module Main where
 
 import MPileup
 import Count
 import qualified Data.ByteString.Lazy.Char8 as BL
 
--- TODO: merge as separate mode
+import System.Console.CmdArgs
+
+data Options = Opts { infile, outfile :: Maybe FilePath
+                    , xout :: Bool
+                    , mincount :: Int } deriving (Data,Typeable)
+
+opts :: Options
+opts = Opts 
+  { infile = Nothing &= args &= typFile
+  , outfile = Nothing &= help "output file"
+  , xout = False &= help "output X instead of IUPAC codes for variable sites"
+  , mincount = 1 &= help "ignore counts less than this"
+  } &= program "vextr v0.4"
+    &= summary "Extract consensus sequence from pooled sequences"
 
 main :: IO ()
 main = do
-  inp <- BL.getContents
+  o <- cmdArgs opts
+  inp <- case infile o of Nothing -> BL.getContents
+                          Just f -> BL.readFile f
   let ms = map readPile1 $ BL.lines inp
-  putStr (makeConsensus ms)
+  (case outfile o of Nothing -> putStr
+                     Just f -> writeFile f) (makeConsensus (xout o,mincount o) ms)
 
-makeConsensus :: [MPileRecord] -> String
-makeConsensus = map mp2char
-  where mp2char :: MPileRecord -> Char
+makeConsensus :: (Bool,Int) -> [MPileRecord] -> String
+makeConsensus (iup,mct) = if iup then map (fixiup . mp2char) else map mp2char
+  where maybeLower x y c1 c2 c3 = if x>mct && y >mct then c3 else if x>mct then c1 else c2
+        fixiup c | c `elem` "ACGTacgtNn" = c
+                 | otherwise             = 'X'
+        mp2char :: MPileRecord -> Char
         mp2char (MPR _ig _chr _cpos _ref cts) = let ss = ptSum cts
-                                                    vs = map getV cts
+                                                    -- vs = map getV cts
                                                 in selectChar ss
         selectChar ss = case toList ss of
           [0,0,0,0] -> 'n'
@@ -38,4 +59,3 @@ makeConsensus = map mp2char
           [_,_,_,0] -> 'V'
 
           _ -> 'N'
-        maybeLower x y c1 c2 c3 = if x>1 && y >1 then c3 else if x>1 then c1 else c2
