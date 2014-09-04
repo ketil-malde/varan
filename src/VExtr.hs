@@ -9,17 +9,19 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import System.Console.CmdArgs
 
 data Options = Opts { infile, outfile :: Maybe FilePath
-                    , xout :: Bool
+                    , xout :: Format
                     , mincount :: Int } deriving (Data,Typeable)
 
 opts :: Options
 opts = Opts 
   { infile = Nothing &= args &= typFile
   , outfile = Nothing &= help "output file"
-  , xout = False &= help "output X instead of IUPAC codes for variable sites"
+  , xout = IUPAC &= help "output X, N, or [a/b] instead of IUPAC codes for variable sites"
   , mincount = 1 &= help "ignore counts less than this"
   } &= program "vextr v0.4"
     &= summary "Extract consensus sequence from pooled sequences"
+
+data Format = Xs | IUPAC | Regex deriving (Data,Typeable,Show)
 
 main :: IO ()
 main = do
@@ -30,11 +32,25 @@ main = do
   (case outfile o of Nothing -> putStr
                      Just f -> writeFile f) (makeConsensus (xout o,mincount o) ms)
 
-makeConsensus :: (Bool,Int) -> [MPileRecord] -> String
-makeConsensus (iup,mct) = if iup then map (fixiup . mp2char) else map mp2char
+makeConsensus :: (Format,Int) -> [MPileRecord] -> String
+makeConsensus (iup,mct) = concatMap (fixiup . mp2char)
   where maybeLower x y c1 c2 c3 = if x>mct && y >mct then c3 else if x>mct then c1 else c2
-        fixiup c | c `elem` "ACGTacgtNn" = c
-                 | otherwise             = 'X'
+        fixiup c | c `elem` "ACGTacgtNn" = [c]
+                 | otherwise             = case iup of
+          Xs -> "X"
+          IUPAC -> [c]
+          Regex -> case c of
+            'R' -> "[A/G]"
+            'Y' -> "[C/T]"
+            'S' -> "[C/G]"
+            'W' -> "[A/T]"
+            'K' -> "[G/T]"
+            'M' -> "[A/C]"
+            'B' -> "[C/G/T]"
+            'D' -> "[A/G/T]"
+            'H' -> "[A/C/T]"
+            'V' -> "[A/C/G]"
+            x   -> [x]
         mp2char :: MPileRecord -> Char
         mp2char (MPR _ig _chr _cpos _ref cts) = let ss = ptSum cts
                                                     -- vs = map getV cts
