@@ -4,6 +4,7 @@
 # each of the $N longest contigs.  We also need:
 #
 # longest-contigs.txt - file with contig names sorted by length
+#                       (just sort the .bai file on column 2)
 # $BAMS               - the bam files to use
 # $N                  - the number of contigs to pick SNPs from
 # 
@@ -15,7 +16,7 @@
 
 N=30
 BAMS=$(echo bams/{ATL,ANT,PAC}_sorted.bam.bam bams/Dwf.bam)
-
+GENOME=B_acuto-0.0.scaffold.fa
 CONTIGS=$(head -$N longest-contigs.txt | cut -f1)
 
 # replace wildcard in char position 101 with a regexp-like expression
@@ -34,8 +35,8 @@ for a in $CONTIGS; do
 	echo \>$HIT
 	START=$((LOC-100))
 	END=$((LOC+100))
-	samtools mpileup -B -r $a:$START-$END $BAMS 2> /dev/null | vextr | fixsnp
-	samtools mpileup -B -r $a:$START-$END $BAMS 2> /dev/null | varan -s -v > "$a:$LOC.out"
+	samtools mpileup -f $GENOME -B -r $a:$START-$END $BAMS 2> /dev/null | vextr | fixsnp
+	samtools mpileup -f $GENOME -B -r $a:$START-$END $BAMS 2> /dev/null | varan -s -v > "$a:$LOC.out"
 	echo
 done
 
