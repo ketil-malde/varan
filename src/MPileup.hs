@@ -38,10 +38,11 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
     parse1 (chr:pos:r:rest) = let trs = triples ref rest
                                   ref = B.head r
                               in MPR (ign trs) chr pos ref trs
-    parse1 xs = error ("parse1: insufficiently long line:"++show xs)
+    parse1 xs = error ("parse1: line too short: "++show xs)
     
     -- set the ignore flag if we only see one or zero alleles    
     ign xs = (length $ filter (/=(0::Int)) $ toList $ ptSum xs) <= 1
+             -- variants are checked for in the showPile' function
 
     triples _ [] = []
     triples ref (_cnt:bases:_quals:rest) = let this = parse ref (C 0 0 0 0 []) (B.map toUpper bases) 

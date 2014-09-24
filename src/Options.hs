@@ -14,7 +14,7 @@ data Options = Opts
   , input, output :: FilePath
   , global :: Bool
   , threads :: Int
-    , min_cov, max_cov :: Int
+  , min_cov, max_cov :: Int
   } deriving (Typeable,Data)
 
 defopts :: Options
@@ -46,7 +46,7 @@ defopts = Opts
   -- Statistics for all sample pairs
   , esi    = False &= help "output conservative expected site information for SNPs using Agresti-Coull intervals"
   }
-  &= program "varan"
+  &= program "varan v0.4"
   &= summary "Identify genetic variants from pooled sequences."
   &= details ["Examples:", ""
              ,"Read input from a pipe, calculate site-wise Fst and confidence intervals, ignoring non-variant sites:"
