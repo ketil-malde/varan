@@ -54,17 +54,18 @@ heteroz_ c1 c2 = let
   in if c1s == 0 || c2s == 0 || h_tot == 0 then (0,0) 
      else (h_tot,h_subs)
 
+-- | Calculate F_ST.  Note that this is weighted by the number of sequences (coverage)
+--   this is not what we want for sequencing data!
 f_st :: [Counts] -> Double
 f_st xs = let
-  hz x = 1 - fromIntegral (sq (getA x::Int) + sq (getC x) + sq (getG x) + sq (getT x))/fromIntegral (sq $ covC x) where sq z = z*z
   h_subs, weights :: [Double]
-  h_tot = hz (ptSum xs)
-  h_subs = map hz xs
+  h_tot = nd (ptSum xs)
+  h_subs = map nd xs
   weights = let t = fromIntegral $ covC (ptSum xs) in [fromIntegral (covC x)/t | x <- xs]
   in if h_tot == 0 then 0.0 
      else (h_tot - sum (zipWith (*) h_subs weights)) / h_tot
 
--- | Calculate F_ST
+-- | Calculate F_ST - equivalent to the above
 f_st_ :: [Counts] -> Double
 f_st_ cs = let
   cs' = map toList cs
