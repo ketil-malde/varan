@@ -54,10 +54,18 @@ heteroz_ c1 c2 = let
   in if c1s == 0 || c2s == 0 || h_tot == 0 then (0,0) 
      else (h_tot,h_subs)
 
--- | Calculate F_ST.  Note that this is weighted by the number of sequences (coverage)
---   this is not what we want for sequencing data!
+-- | Simple calculation, samples represent equal populations (weights = 1/n)
 f_st :: [Counts] -> Double
 f_st xs = let
+  l = fromIntegral (length xs)
+  nd_tot = nd (ptSum xs)
+  nd_sub = map ((/l) . nd) xs
+  in if nd_tot == 0 then 0.0 else (nd_tot - sum nd_sub) / nd_tot
+
+-- | Calculate F_ST.  Note that this is weighted by the number of sequences (coverage)
+--   this is not what we want for sequencing data!
+f_st__ :: [Counts] -> Double
+f_st__ xs = let
   h_subs, weights :: [Double]
   h_tot = nd (ptSum xs)
   h_subs = map nd xs
