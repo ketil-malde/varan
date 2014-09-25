@@ -3,11 +3,13 @@
 module Process (proc_fused, run_procs, showPile') where
 
 import Options
-import ParMap
-import MPileup
-import Metrics
-import Count
-import ESIV
+import ParMap  (parMap)
+import MPileup (readPile1, counts, showC, showV, MPileRecord(..))
+import Metrics (pi_k, f_st, nd
+               , conf_all, ds_all, dsw_all
+               , fst_params, ppi_params, dsconf_pairs)
+import Count   (getV, covC, Counts(..))
+import ESIV    (esiv)
 
 import Data.List (tails)
 import qualified Data.ByteString.Char8 as B
