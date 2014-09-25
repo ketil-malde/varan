@@ -1,5 +1,9 @@
 -- | Calculate various metrics/statistics
-module Metrics where
+module Metrics
+       ( pi_k, f_st, nd
+       , conf_all, ds_all, dsw_all
+       , fst_params, ppi_params, dsconf_pairs)
+       where
 
 import AgrestiCoull
 import MPileup (by_major_allele)
