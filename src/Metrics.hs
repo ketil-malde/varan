@@ -6,7 +6,7 @@ import MPileup (by_major_allele)
 import Count
 import Statistics.Distribution
 import Statistics.Distribution.ChiSquared
-import Data.List (foldl1')
+import Data.List (foldl1', tails)
 
 -- | Calculate vector angle between allele frequencies.  This is 
 --   similar to `dist`, but from 1 (equal) to 0 (orthogonal)
@@ -97,17 +97,21 @@ nd2 cs1 cs2 = let fs1 = pi_freqs cs1
                   fs2 = pi_freqs cs2
               in 1 - sum (zipWith (*) fs1 fs2)
 
--- | Calculate Pi (my version), the expected number of differences
--- between two random samples from the populations.  I.e. the
--- probability that sampling once from each population will not be all
--- the same.  One weakness is that if one population has fifty-fifty
--- allele frequencies, the result is always exactly 0.5.  I.e. it
--- can't identify divergent allele frequencies in that case.  Like Fst, this
--- also is indifferent to the actual counts, so reliability depends on coverage.
-
+-- | Calculate Pi, the probability of getting different nucleotides by
+-- sampling from two different populations.
 pi_k :: [Counts] -> Double
-pi_k cs = let fs = map pi_freqs cs
-              c = fromIntegral $ covC $ ptSum $ cs
+pi_k cs = sum [nd2 x y | (x:x2:xs) <- tails cs, y <- (x2:xs)] * 2/ lcs*(lcs-1)
+  where lcs = fromIntegral (length cs)
+
+-- pi_k_WRONG is the probability that sampling once from each
+-- population will not be all the same.  One weakness is that if one
+-- population has fifty-fifty allele frequencies, the result is always
+-- exactly 0.5.  I.e. it can't identify divergent allele frequencies
+-- in that case.  Like Fst, this also is indifferent to the actual
+-- counts, so reliability depends on coverage.
+pi_k_WRONG :: [Counts] -> Double
+pi_k_WRONG cs = let fs = map pi_freqs cs
+                    c = fromIntegral $ covC $ ptSum $ cs
   in if c>1 then c/(c-1)*(1 - (sum $ foldl1' (zipWith (*)) fs)) else 0
 
 pi_freqs :: Counts -> [Double]
