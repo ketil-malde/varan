@@ -1,3 +1,5 @@
+{-# Options_Ghc -fno-warn-unused-binds #-}
+
 -- | Calculate various metrics/statistics
 module Metrics
        ( pi_k, f_st, nd
@@ -35,7 +37,9 @@ fst_params [] = []
 -- | Calculate heterozyogisity total, and within groups
 -- Not weighting by coverage.
 heteroz :: Counts -> Counts -> (Double, Double)
-heteroz c1 c2 = (nd (c1 `ptAdd` c2), (nd c1 + nd c2)/2)
+heteroz c1 c2 = let nd_tot = nd c1 + nd c2
+                in if covC c1 == 0 || covC c2 == 0 then (0,0) 
+                   else (nd (c1 `ptAdd` c2), nd_tot/2)
 
 -- Weighted heterozygosity
 heteroz_w :: Counts -> Counts -> (Double,Double)

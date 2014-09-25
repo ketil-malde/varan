@@ -94,6 +94,7 @@ proc_gfst o = proc_fold zero f
         zero = repeat (repeat (0,0))
         plus (a,c) (b,d) = (a+b,c+d)
         deepSeq x | x == x = x
+                  | True   = error (show x)
 
 -- | Calculate and print global pairwise Fst
 out_gfst :: [[(Double,Double)]] -> IO ()
@@ -127,6 +128,7 @@ proc_gppi o = proc_fold zero f
         zero = (UV 0 0 0, repeat (repeat 0))
         plus a b = if isNaN b then a else a+b
         deepSeq x | x == x = x
+                  | True   = error (show x)
 
 -- | Calculate and print global pairwise ND
 --   Todo: divide by genome size        
