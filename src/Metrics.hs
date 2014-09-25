@@ -17,7 +17,6 @@ angle c1' c2' = let
   in sum $ zipWith (*) (map (/vnorm c1) c1) (map (/vnorm c2) c2)
 
 -- Calculate pairwise nucleotide diversities
--- Not adjusting for coverage
 ppi_params :: [Counts] -> [[Double]]
 ppi_params (c:cs) = map (\x -> nd2 c x) (c:cs) : ppi_params cs
 ppi_params [] = []
@@ -25,12 +24,18 @@ ppi_params [] = []
 -- calculate diversity within and between sample pairs
 fst_params :: [Counts] -> [[(Double,Double)]]
 fst_params (x:xs) = go (x:xs)
-  where go (y:ys) = map (heteroz $ y) ys : go ys
+  where go (y:ys) = map (heteroz y) ys : go ys
         go [] = []
 fst_params [] = []
 
-heteroz :: Counts -> Counts -> (Double,Double)
-heteroz c1 c2 = let
+-- | Calculate heterozyogisity total, and within groups
+-- Not weighting by coverage.
+heteroz :: Counts -> Counts -> (Double, Double)
+heteroz c1 c2 = (nd (c1 `ptAdd` c2), (nd c1 + nd c2)/2)
+
+-- Weighted heterozygosity
+heteroz_w :: Counts -> Counts -> (Double,Double)
+heteroz_w c1 c2 = let
   c1s = fromIntegral $ covC c1
   c2s = fromIntegral $ covC c2
   total = c1s + c2s
@@ -40,8 +45,8 @@ heteroz c1 c2 = let
   in if c1s == 0 || c2s == 0 || h_tot == 0.0 then (0,0) 
      else (h_tot,h_subs)
 
-heteroz_ :: [Double] -> [Double] -> (Double, Double)
-heteroz_ c1 c2 = let
+heteroz_w2 :: [Double] -> [Double] -> (Double, Double)
+heteroz_w2 c1 c2 = let
   c1s = sum c1
   c2s = sum c2
   total = c1s + c2s
