@@ -45,7 +45,7 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
              -- variants are checked for in the showPile' function
 
     triples _ [] = []
-    triples ref (_cnt:bases:_quals:rest) = let this = parse ref (C 0 0 0 0 []) (B.map toUpper bases) 
+    triples ref (_cnt:bases:_quals:rest) = let this = parse ref czero (B.map toUpper bases)
                                            in this `seq` this : triples ref rest
     triples _ _ = error "triples: incorrect number of columns"
     
@@ -61,9 +61,10 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
                 | c == 'C'             = parse ref (addC_ cts 1) str
                 | c == 'G'             = parse ref (addG_ cts 1) str
                 | c == 'T'             = parse ref (addT_ cts 1) str
-                | c == 'N'             = parse ref cts str                                         
-                | c == '^'             = parse ref (addRef cts 1) $ B.drop 1 str
-                | c == '*' || c == '$' = parse ref cts str  -- * is a deletion, also reported as variant...
+                | c == 'N'             = parse ref (addN_ cts 1) str
+                | c == '^'             = parse ref cts $ B.drop 1 str
+                | c == '*'             = parse ref (addDel_ cts 1) str
+                | c == '$'             = parse ref cts str
                 | c == '-' || c == '+' = let Just (cnt,rest) = B.readInt str
                                              var = (if c=='+' then Ins else Del) (B.unpack $ B.take (fromIntegral cnt) rest)
                                          in parse ref (addV cts var) (B.drop (fromIntegral cnt) rest)
@@ -72,12 +73,12 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
 
 -- | Show SNP counts and coverage
 showC :: Counts -> (String,Int)
-showC x = (" "++(intercalate ":" $ map show (toList x :: [Int])),covC x)
+showC x = (" "++(intercalate ":" $ map show [getA_ x,getC_ x,getG_ x,getT_ x,getN_ x,getDel_ x]),covC x)
 
 -- | Show structural variant count
 showV :: [Counts] -> String
 showV cs = let
-  vs = nub $ concatMap getV cs
-  countV :: Variant -> Counts -> Int
-  countV v c = length . filter (==v) $ getV c
-  in intercalate "\t" (show vs:[unwords $ map (\v -> show $ countV v c) vs | c <- cs])
+  vs = [[v | Ins v <- getV c] | c <- cs]
+  vuniq = nub $ concat vs
+  countV v = map (length . filter (==v)) vs
+  in intercalate "," $ [unwords (v:(map show $ countV v)) | v <- vuniq]
