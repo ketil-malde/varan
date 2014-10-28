@@ -20,7 +20,7 @@ opts = Opts
   , format = IUPAC &= help "output X, N, or [a/b] instead of IUPAC codes for variable sites"
   , fasta  = False &= help "output FASTA header"
   , mincount = 1 &= help "ignore counts less than this"
-  } &= program "vextr v0.4"
+  } &= program "vextr v0.5"
     &= summary "Extract consensus sequence from pooled sequences"
 
 data Format = Xs | IUPAC | Regex deriving (Data,Typeable,Show)

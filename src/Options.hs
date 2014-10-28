@@ -46,7 +46,7 @@ defopts = Opts
   -- Statistics for all sample pairs
   , esi    = False &= help "output conservative expected site information for SNPs using Agresti-Coull intervals"
   }
-  &= program "varan v0.4"
+  &= program "varan v0.5"
   &= summary "Identify genetic variants from pooled sequences."
   &= details ["Examples:", ""
              ,"Read input from a pipe, calculate site-wise Fst and confidence intervals, ignoring non-variant sites:"
