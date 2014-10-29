@@ -121,9 +121,9 @@ proc_gppi o = proc_fold zero f
   where f (MPR sup _ _ _ cts) (uv,cur) =
           let new = Metrics.ppi_params cts
               cov = sum $ map covC cts
-              nu = add_uv uv $ fromIntegral cov
-              nc = if sup || (max_cov o > 0 && cov > max_cov o) || cov < min_cov o 
-                   then cur else deepSeq $ zipWith (zipWith plus) cur new 
+              ign = sup || (max_cov o > 0 && cov > max_cov o) || cov < min_cov o
+              nu = if ign then uv else add_uv uv (fromIntegral cov)
+              nc = if ign then cur else (deepSeq (zipWith (zipWith plus) cur new))
           in nu `seq` nc `seq` (nu,nc)
         zero = (UV 0 0 0, repeat (repeat 0))
         plus a b = if isNaN b then a else a+b
