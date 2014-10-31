@@ -2,7 +2,7 @@
 
 -- | Calculate various metrics/statistics
 module Metrics
-       ( pi_k, f_st, nd
+       ( pi_k, f_st, nd, maf
        , conf_all, ds_all, dsw_all
        , fst_params, ppi_params, dsconf_pairs)
        where
@@ -12,7 +12,7 @@ import MPileup (by_major_allele)
 import Count
 import Statistics.Distribution
 import Statistics.Distribution.ChiSquared
-import Data.List (foldl1', tails)
+import Data.List (foldl1', tails, sort)
 
 -- | Calculate vector angle between allele frequencies.  This is 
 --   similar to `dist`, but from 1 (equal) to 0 (orthogonal)
@@ -102,6 +102,10 @@ f_st_ cs = let
             in [sum c/total | c <- cs']
   in if h_tot == 0 then 0.0 -- no heterozygosity in the population!
      else (h_tot - sum (zipWith (*) h_subs weights)) / h_tot
+
+-- | Caluclate MAF (minor allele frequency)
+maf :: Counts -> Double
+maf c = (head . tail . reverse . sort . toList $ c)/fromIntegral (covC c)
 
 -- | Calculate nucleotide diversity, the probability that sampling
 -- twice will give you two different results.  Should we correct by

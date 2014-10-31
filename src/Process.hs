@@ -6,9 +6,9 @@ import Options
 import ParMap  (parMap)
 import MPileup (readPile1, counts, showC, showV, MPileRecord(..))
 import Metrics (pi_k, f_st, nd
-               , conf_all, ds_all, dsw_all
+               , conf_all, ds_all, dsw_all, maf
                , fst_params, ppi_params, dsconf_pairs)
-import Count   (getV, covC, Counts(..))
+import Count   (getV, covC, Counts(..), ptSum)
 import ESIV    (esiv)
 
 import Data.List (tails)
@@ -177,7 +177,8 @@ gen_header o (MPR _ _ _ _ cs) = B.pack $ concat [
   ,if Options.pconf o then "\tpconf" else ""
   ,if Options.ds o then "\tds-agresti" else ""
   ,if Options.dsw o then "\tds-wald" else ""
-  ,if Options.nd_all o then "\tNuc divs" else ""
+  ,if Options.nd_all o then "\tNuc divs\tNd tot" else ""
+  ,if Options.maf o then "\tMAF" else ""
   ,if Options.esi  o then "\tESI" else ""
   ,if Options.variants o then "\tVariants" else ""
   ,"\n"  
@@ -201,7 +202,8 @@ showPile o mpr = if suppress o && ignore mpr && (all null (map getV $ counts mpr
           , when (Options.pconf o) ("\t"++dsconf_pairs 0.01 (counts mpr))
           , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all 2.326 $ counts mpr))
           , when (Options.dsw o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ dsw_all 2.326 $ counts mpr))
-          , when (Options.nd_all o) ("\t"++(unwords $ map (printf "%.2f" . nd) $ counts mpr))
+          , when (Options.nd_all o) ("\t"++(unwords $ map (printf "%.2f" . nd) $ counts mpr)++"\t"++printf "%.3f" (nd $ ptSum $ counts mpr))
+          , when (Options.maf o) ("\t"++unwords (map (printf "%.2f" . Metrics.maf) (counts mpr)))
 
           -- Between pairs of samples
           , when (Options.esi o) (pairwise (ESIV.esiv 1.64 0.01) (counts mpr))
