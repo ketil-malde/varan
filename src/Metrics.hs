@@ -105,7 +105,9 @@ f_st_ cs = let
 
 -- | Caluclate MAF (minor allele frequency)
 maf :: Counts -> Double
-maf c = (head . tail . reverse . sort . toList $ c)/fromIntegral (covC c)
+maf c = if cv == 0 then 0.0
+        else (head . tail . reverse . sort . toList $ c)/fromIntegral cv
+  where cv = covC c
 
 -- | Calculate nucleotide diversity, the probability that sampling
 -- twice will give you two different results.  Should we correct by
