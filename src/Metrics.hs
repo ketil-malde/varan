@@ -71,8 +71,9 @@ heteroz_w2 c1 c2 = let
 f_st :: [Counts] -> Double
 f_st xs = let
   l = fromIntegral (length xs)
-  nd_tot = nd (ptSum xs)
   nd_sub = map ((/l) . nd) xs
+  -- total heterozygosity based on average allele frequencies over populations
+  nd_tot = 1 - sum (map (\x->x*x) $ map (/l) $ sumList (map pi_freqs xs))
   in if nd_tot == 0 then 0.0 else (nd_tot - sum nd_sub) / nd_tot
 
 -- | Calculate F_ST.  Note that this is weighted by the number of sequences (coverage)
