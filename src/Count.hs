@@ -60,7 +60,8 @@ addV c v = c { getV = v : getV c }
 {-# INLINE addV #-}
 
 covC :: Counts -> Int
-covC c = fromIntegral (getA_ c + getC_ c + getG_ c + getT_ c + getN_ c + getDel_ c)
+covC c = fromIntegral (getA_ c + getC_ c + getG_ c + getT_ c) -- + getN_ c + getDel_ c)
+ -- mostly, we want to compare the identified bases.
 
 ptAdd :: Counts -> Counts -> Counts
 ptAdd a b = a `addA` (getA_ b) `addC` (getC_ b) `addG` (getG_ b) `addT` (getT_ b) `addN` (getN_ b) `addDel` (getDel_ b) -- todo: concat variants?
