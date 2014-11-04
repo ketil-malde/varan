@@ -128,7 +128,7 @@ nd2 cs1 cs2 = let fs1 = pi_freqs cs1
 -- | Calculate Pi, the probability of getting different nucleotides by
 -- sampling from two different populations.
 pi_k :: [Counts] -> Double
-pi_k cs = sum [nd2 x y | (x:x2:xs) <- tails cs, y <- (x2:xs)] * 2/ lcs*(lcs-1)
+pi_k cs = sum [nd2 x y | (x:x2:xs) <- tails cs, y <- (x2:xs)] * 2/(lcs*(lcs-1))
   where lcs = fromIntegral (length cs)
 
 -- pi_k_WRONG is the probability that sampling once from each
