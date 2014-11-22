@@ -38,7 +38,7 @@ run_procs o recs@(M r1 _:_) = do
   outh <- if use_stdout then return stdout else openFile (output o) WriteMode
   B.hPutStr outh $ gen_header o r1
   (gi,gfin) <- start_proc proc_gpi
-               (\x -> putStrLn ("Global pi_k (nucleotide diversity): "++show x++"\n"))
+               (\x -> printf "Global pi_k (nucleotide diversity): %d\n" (round x :: Integer))
   (ppi,pfin) <- start_proc (proc_gppi o) out_gppi
   (fi,ffin) <- start_proc (proc_gfst o) out_gfst
   let run (M r s:rs) = do
@@ -111,7 +111,7 @@ out_gfst xs = do
 -- --------------------------------------------------
 
 data UniVar = UV { _count :: {-# UNPACK #-} !Int, _sum1, _sum2 :: {-# UNPACK #-} !Double }
-
+  deriving Show
 add_uv :: UniVar -> Double -> UniVar
 add_uv (UV c s s2) d = UV (c+1) (s+d) (s2+d*d)
 
@@ -141,7 +141,7 @@ out_gppi (UV n s1 s2,xs) = do
           go (i+1) ls
       go _ [] = return ()
   putStrLn "Coverage statistics:"
-  _ <- printf "  covered sites: %d\n  avg. cover: %.2f\n  std. dev.: %.2f\n\n" n  (s1/n') (sqrt (s2/n'-(s1*s1)/(n'*n')))
+  _ <- printf "  observed variant sites: %d\n  avg. cover: %.2f\n  std. dev.: %.2f\n\n" n  (s1/n') (sqrt (s2/n'-(s1*s1)/(n'*n')))
   putStrLn "Pairwise Nucleotide Diversities:"
   putStrLn (" "++ concat [ "     s"++show i | i <- [1..length (head xs)]])
   go 1 xs
