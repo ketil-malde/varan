@@ -11,7 +11,8 @@ import System.Console.CmdArgs
 data Options = Opts { infile, outfile :: Maybe FilePath
                     , format :: Format
                     , fasta :: Bool
-                    , mincount :: Int } deriving (Data,Typeable)
+                    , mincount :: Int
+                    , minfreq :: Int } deriving (Data,Typeable)
 
 opts :: Options
 opts = Opts 
@@ -20,6 +21,7 @@ opts = Opts
   , format = IUPAC &= help "output X, N, or [a/b] instead of IUPAC codes for variable sites"
   , fasta  = False &= help "output FASTA header"
   , mincount = 1 &= help "ignore counts less than this"
+  , minfreq  = 5 &= help "ignore allele frequencies less than this"
   } &= program "vextr v0.5"
     &= summary "Extract consensus sequence from pooled sequences"
 
@@ -34,10 +36,10 @@ main = do
       outf = case outfile o of Nothing -> putStr
                                Just f -> writeFile f
       gen = if fasta o then makeFasta else makeConsensus
-  outf $ gen (format o,mincount o) ms
+  outf $ gen (format o,mincount o,minfreq o) ms
 
 
-makeFasta :: (Format,Int) -> [MPileRecord] -> String
+makeFasta :: (Format,Int,Int) -> [MPileRecord] -> String
 makeFasta fi ms = let
   header = case ms of
     (m1:_) -> BL.unpack (chrom m1)++":"++BL.unpack (cpos m1)
@@ -47,8 +49,8 @@ makeFasta fi ms = let
     (this,more) -> this : breaks more
   in unlines (header:breaks (makeConsensus fi ms))
 
-makeConsensus :: (Format,Int) -> [MPileRecord] -> String
-makeConsensus (iup,mct) = concatMap (fixiup iup . selectChar mct . ptSum . counts)
+makeConsensus :: (Format,Int,Int) -> [MPileRecord] -> String
+makeConsensus (iup,mct,mfq) = concatMap (fixiup iup . selectChar mct mfq . ptSum . counts)
   -- todo: include variants
 
 -- this doesn't work so well with high coverage/many libraries
@@ -73,8 +75,8 @@ fixiup iup c | c `elem` "ACGTacgtNn" = [c]
             x   -> [x]
 
 -- | Convert allele counts into IUPAC character
-selectChar :: Int -> Counts -> Char
-selectChar mct ss = case toList ss of
+selectChar :: Int -> Int -> Counts -> Char
+selectChar mct mfq ss = case toList ss of
           [0,0,0,0] -> 'n'
           [_,0,0,0] -> 'A'
           [0,_,0,0] -> 'C'
@@ -94,5 +96,7 @@ selectChar mct ss = case toList ss of
           [_,_,_,0] -> 'V'
 
           _ -> 'N'
-  where maybeWild x y c1 c2 c3 = if x>mct && y >mct then c3 else if x>mct then c1 else c2
-        
+  where maybeWild x y c1 c2 c3 =
+          let xok = x > mct && x > (x+y)*mfq`div`100
+              yok = y > mct && y > (x+y)*mfq`div`100
+          in if xok && yok then c3 else if xok then c1 else if yok then c2 else 'n'
