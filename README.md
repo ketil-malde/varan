@@ -180,5 +180,15 @@ can use `sparks test` to check this - it should display a series of
 gradual changes.  If you see solid color blocks, you need to change
 terminal and/or font.
 
+# Citation and other information
+
+More information, in particular about the method underlying the
+information scores (`varan -e` and `sparks info`) can be found in:
+
+Ketil Malde: _Estimating the information value of polymorphic sites using pooled sequences_.
+BMC Genomics 2014, 15(Suppl 6):S20
+[http://www.biomedcentral.com/1471-2164/15/S6/S20](http://www.biomedcentral.com/1471-2164/15/S6/S20)
+
+
 
 
