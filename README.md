@@ -1,11 +1,11 @@
 # Brief user guide for varan
 
-This is a small guide for an even smaller program that analyses gene
-variant data from pooled samples, with the intention of identifying
-the variants that have different underlying allele frequencies in the
-pools.
+This is a small guide for a set of not-so-small-anymore programs that
+analyse gene variant data from pooled samples, with the intention of
+identifying the variants that have different underlying allele
+frequencies in the pools.
 
-## Usage
+## Usage for `varan`
 
 First you need to align your pooled reads into one BAM-file each, say
 `sample1.bam`, `sample2.bam`, etc.
@@ -83,7 +83,7 @@ through `samtools`, if you index the fasta-file first.  For instance:
 
     samtools mpileup -f ref.fasta -r CHR8:4500-6000 sample1.bam sample2.bam | varan > out
 
-# Specific output options
+# Specific output options for `varan`
 
 As usual, you can specify the `--help` option to get an overview of
 the available options.
@@ -138,3 +138,47 @@ selecting diagnostic SNPs.
 
 Finally, `-g` outputs some global statistics, including a matrix of
 global F_ST and nucleotide diversity between all sample pairs.
+
+# Extracting regions with `vextr`
+
+After filtering and sorting `varan`'s output with regular Unix tools
+or what have you, you now want to extract the sequence for a
+particular region, perhaps to use it for primer design.  This is one
+way to do this:
+
+    samtools mpileup -f ref.fasta -r CHR8:4500-4700 sample1.bam sample2.bam | vextr
+
+This will simply output the sequence on a single line.  By default,
+`vextr` will use IUPAC codes for ambigous bases.  If there are alternative
+bases present but only at low frequency (by default singletons or less
+than five percent, can be adjusted with the `--mincount` and
+`--minfreq` options), `vextr` outputs the major allele, but in lower
+case.
+
+Using the `--fasta` option generates a FASTA header (using chromosome
+name and starting position to construct the sequence name), and breaks
+the sequence into 60 character lines.
+
+If IUPAC is not what you want, you can specify `--format=reg` to get
+regular expressions (e.g., `[A/C]`), or `--format=xs` to have ambigous
+bases output as `X` characters.
+
+# Quick and dirty visualization with `sparks`
+
+Another way to look at mpileup data is as sparklines.  The `sparks`
+executable reads from standard input.  Using `sparks disp` generates
+one line of consensus sequence per sample, but highlighting the
+different bases with colors, and ambigous bases with Unicode
+characters so that the amount of color corresponds to base frequencies
+in that position.  Alternatively `sparks info` draws a single
+sparkline, showing a histogram of the information value for each
+allele in each position (using the same colors as `sparks disp`).
+
+This requires a terminal able to display Unicode graphical characters,
+(e.g., `xterm` won't work, and `uxterm` requires the right font). You
+can use `sparks test` to check this - it should display a series of
+gradual changes.  If you see solid color blocks, you need to change
+terminal and/or font.
+
+
+
