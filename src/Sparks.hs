@@ -33,7 +33,7 @@ main :: IO ()
 main = do
   opts <- cmdArgsRun $ cmdArgsMode $ modes [test,disp,info,cite]
           &= summary "Visualize information from 'samtools mpileup' as sparklines"
-          &= program "sparks"
+          &= program "sparks v0.5.1"
   inp <- BL.getContents
   let ms = map readPile1 $ BL.lines inp
   mapM_ putStrLn $ case opts of

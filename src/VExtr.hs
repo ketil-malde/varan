@@ -22,7 +22,7 @@ opts = Opts
   , fasta  = False &= help "output FASTA header"
   , mincount = 1 &= help "ignore counts less than this"
   , minfreq  = 5 &= help "ignore allele frequencies less than this"
-  } &= program "vextr v0.5"
+  } &= program "vextr v0.5.1"
     &= summary "Extract consensus sequence from pooled sequences"
     &= details ["Examples:", ""
              ,"Read input from a pipe, output IUPAC codes:"

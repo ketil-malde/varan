@@ -1,5 +1,5 @@
 Name:          varan
-Version:       0.5
+Version:       0.5.1
 License:       GPL
 Cabal-Version: >= 1.6
 Build-Type:    Simple
@@ -7,10 +7,9 @@ Category:      Bioinformatics
 Author:        Ketil Malde
 Maintainer:    Ketil Malde <ketil@malde.org>
 Synopsis:      Process mpileup output to identify significant differences
-Description:   Using Agresti-Coull estimation of confidence interval, report
-	       variant positions found in pooled samples along with significance of
-	       the variant having different underlying allele frequency ('+' for 95%, 
-	       '*' for 99%).
+Description:   Post-processing output from `samtools mpileup` to extract various information, 
+	       including statistics (per-position or global), consensus sequence (in various
+	       formats), and textual visualizations.
 
 Executable varan
     Hs-Source-Dirs:  src
@@ -19,7 +18,6 @@ Executable varan
     Build-Depends:   base >= 4 && < 5, random, mtl, parallel, statistics, cmdargs, bytestring
     Ghc-Options:     -rtsopts -Wall -threaded
 
--- this is just a quick hack, should be merged into the program proper
 Executable vextr
     Hs-Source-Dirs:  src
     Main-Is:         VExtr.hs
@@ -33,8 +31,3 @@ Executable sparks
     Other-Modules:   MPileup, Count
     Build-Depends:   base >= 4 && < 5, bytestring, cmdargs, ansi-terminal
     Ghc-Options:     -rtsopts -Wall -threaded
-
--- For parallel execution, we might want to add these, but they
--- seem to degrade performance on older GHC
--- Ghc-Options: -threaded -with-rtsopts=-N
-
