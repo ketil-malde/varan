@@ -9,6 +9,9 @@ import Data.Char (chr)
 import Data.List (sort)
 import System.Console.CmdArgs
 
+import ESIV
+import Count
+import VExtr (makeConsensus, Format(IUPAC))
 import MPileup
 -- import Count
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -31,15 +34,41 @@ main = do
           &= program "sparks"
   inp <- BL.getContents
   let ms = map readPile1 $ BL.lines inp
-  case opts of
+  mapM_ putStrLn $ case opts of
      Test -> teststr
-     Disp -> mapM_ putStrLn $ sparklines ms
-     Info -> error "Not implemented yet"
+     Disp -> sparklines ms
+     Info -> infoline ms
 
-teststr :: IO ()
-teststr = putStrLn (concat [count2char [5,b,0,0] | b <- [0..10]]
-                    ++concat [count2char [0,5,b,0] | b <- [0..10]]
-                    ++ concat [count2char [0,0,5,b] |  b <- [0..10]] ++ count2char [0,0,0,10] ++ setSGRCode [])
+teststr :: [String]
+teststr = [ concat [count2char [5,b,0,0] | b <- [0..10]]
+          ++concat [count2char [0,5,b,0] | b <- [0..10]]
+          ++ concat [count2char [0,0,5,b] |  b <- [0..10]]
+          ++ count2char [0,0,0,10] ++ setSGRCode []]
+
+infoline :: [MPileRecord] -> [String]
+infoline ms = (cons:esivs)
+  where
+    cons = makeConsensus (IUPAC,1,5) ms
+    esivs = map (concat . (++ rst)) $ transpose $ map esivstr ms
+    rst = [setSGRCode []]
+
+esivstr :: MPileRecord -> [String]
+esivstr m = let
+  (s1:s2:_) = counts m
+  [t1,t2] = map covC [s1,s2]
+  [maxpos1,maxpos2] = map (snd . last . sort) [zip xs [0..3] | xs <- [toList s1,toList s2]]
+  es = [esiv1 1.64 0.01 (x,t1-x) (y,t2-y) | (x,y) <- zip (toList s1) (toList s2)]
+  sorted = sort (zip es [0..3::Int])
+  echar bg fg f = setSGRCode [SetColor Foreground Dull fg,SetColor Background Dull bg]
+                  ++ if f<0 then [chr (0x2589-max 1 (min 8 (round (20*abs f))))]
+                       else [chr (0x2580+max 1 (min 8 (round (10*f))))]
+  toCol = ([Red,Blue,Green,Yellow]!!)
+  in if sum (map abs es) > 0.1
+     then let
+       (plus,ppos) = last sorted
+       (minus,mpos) = head sorted
+       in [echar Black (toCol ppos) plus, echar (toCol mpos) Black minus]
+     else [echar Black (toCol maxpos1) 0, echar (toCol maxpos2) Black 99]
 
 sparklines :: [MPileRecord] -> [String]
 sparklines = map sparkline . transpose . map counts
