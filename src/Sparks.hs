@@ -56,9 +56,11 @@ esivstr :: MPileRecord -> [String]
 esivstr m = let
   (s1:s2:_) = counts m
   [t1,t2] = map covC [s1,s2]
-  [maxpos1,maxpos2] = map (snd . last . sort) [zip xs [0..3] | xs <- [toList s1,toList s2]]
-  es = [esiv1 1.64 0.01 (x,t1-x) (y,t2-y) | (x,y) <- zip (toList s1) (toList s2)]
+  [l1,l2] = map toList [s1,s2]
+  [maxpos1,maxpos2] = map (snd . last . sort) [zip xs [0..3] | xs <- [l1,l2]]
+  es = [esiv1 1.64 0.01 (x,t1-x) (y,t2-y) | (x,y) <- zip l1 l2]
   sorted = sort (zip es [0..3::Int])
+  echar :: Color -> Color -> Double -> String
   echar bg fg f = setSGRCode [SetColor Foreground Dull fg,SetColor Background Dull bg]
                   ++ if f<0 then [chr (0x2589-max 1 (min 8 (round (20*abs f))))]
                        else [chr (0x2580+max 1 (min 8 (round (10*f))))]
