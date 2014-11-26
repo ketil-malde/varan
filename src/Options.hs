@@ -55,6 +55,9 @@ defopts = Opts
              ,"", "  samtools mpileup -f ref.fasta reads.bam | varan --fst --conf -s -o snps.txt", ""
              ,"Read input from a file, send the site-wise output to /dev/null, and only output global statistics to standard output:"
              ,"", "  varan --global -o /dev/null input.mpile", ""
+             ,"If you use this program, please cite:"
+             ,"  BMC Genomics 2014, 15(Suppl 6):S20"
+             ,"  http://www.biomedcentral.com/1471-2164/15/S6/S20"
                ]    
 
 getArgs :: IO (IO BL.ByteString,Options)

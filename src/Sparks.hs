@@ -19,17 +19,19 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 data Options = Test
              | Disp
              | Info -- maybe select samples to contrast? color?
+             | Cite
              deriving (Typeable,Data)
 
-test, disp, info  :: Options
+test, disp, info, cite  :: Options
 test = Test &= details ["Prints a test string.",
                        "This is useful for checking that your terminal supports the graphical characters needed to generate sparklines.  It should look like gradual transitions from one color to the next."]
 disp = Disp &= details ["Show per sample consensus sequences.","Reads mpile-formatted input, and shows the consensus for each sample, one line each.  This can potentially result in very long lines, use 'samtools mpileup' with the '-r' option to restrict output."]
 info = Info &= details ["Show expected information values.","This shows the information value for observing each allele, i.e. how diagnostic each site is between the two samples."]
+cite = Cite &= details ["Output citation information."]
 
 main :: IO ()
 main = do
-  opts <- cmdArgsRun $ cmdArgsMode $ modes [test,disp,info]
+  opts <- cmdArgsRun $ cmdArgsMode $ modes [test,disp,info,cite]
           &= summary "Visualize information from 'samtools mpileup' as sparklines"
           &= program "sparks"
   inp <- BL.getContents
@@ -38,6 +40,13 @@ main = do
      Test -> teststr
      Disp -> sparklines ms
      Info -> infoline ms
+     Cite -> citestr
+
+citestr :: [String]
+citestr = ["If you use this program, please cite:"
+          ,"  BMC Genomics 2014, 15(Suppl 6):S20"
+          ,"  http://www.biomedcentral.com/1471-2164/15/S6/S20"
+          ]
 
 teststr :: [String]
 teststr = [ concat [count2char [5,b,0,0] | b <- [0..10]]
