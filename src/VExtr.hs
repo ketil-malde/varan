@@ -1,6 +1,6 @@
 {-# Language DeriveDataTypeable #-}
 
-module Main where
+module VExtr where
 
 import MPileup
 import Count
