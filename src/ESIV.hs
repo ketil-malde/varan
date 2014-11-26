@@ -20,15 +20,17 @@ esiv :: Double -> Double -> Counts -> Counts -> Double
 esiv z epsilon c1 c2 = let
   t1 = covC c1
   t2 = covC c2
-  esiv1 (a1,b1) (a2,b2) 
-    | j1+epsilon<i2 = esiv_score (j1+epsilon/2) (i2-epsilon/2)
-    | i1>j2+epsilon = esiv_score (j2+epsilon/2) (i1-epsilon/2)
+  in sum [abs $ esiv1 z epsilon (x,t1-x) (y,t2-y) | (x,y) <- zip (toList c1) (toList c2)]
+
+esiv1 :: Double -> Double -> (Int, Int) -> (Int, Int) -> Double
+esiv1 z eps (a1,b1) (a2,b2) 
+    | j1+eps<i2 = esiv_score (j1+eps/2) (i2-eps/2)
+    | i1>j2+eps = esiv_score (i1-eps/2) (j2+eps/2) 
     | otherwise     = 0
         where
           (i1,j1) = confidenceInterval z a1 b1
           (i2,j2) = confidenceInterval z a2 b2
-  in sum [esiv1 (x,t1-x) (y,t2-y) | (x,y) <- zip (toList c1) (toList c2)]
 
 esiv_score :: Double -> Double -> Double
-esiv_score p1 p2 = abs ((p1+p2)/2*logBase 2 (p1/p2))
+esiv_score p1 p2 = (p1+p2)/2*logBase 2 (p1/p2)
 
