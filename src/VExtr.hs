@@ -51,7 +51,7 @@ main = do
 makeFasta :: (Format,Int,Int) -> [MPileRecord] -> String
 makeFasta fi ms = let
   header = case ms of
-    (m1:_) -> BL.unpack (chrom m1)++":"++BL.unpack (cpos m1)
+    (m1:_) -> '>':BL.unpack (chrom m1)++":"++BL.unpack (cpos m1)
     [] -> ""
   breaks str = case splitAt 60 str of
     (rest,"") -> [rest]
