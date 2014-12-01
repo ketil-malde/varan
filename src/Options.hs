@@ -13,7 +13,7 @@ data Options = Opts
   , chi2, f_st, pi_k
   , conf, ds, dsw, esi, pconf, nd_all, maf  :: Bool
   , input, output :: FilePath
-  , global :: Bool
+  , global, sync :: Bool
   , threads :: Int
   , min_cov, max_cov :: Int
   } deriving (Typeable,Data)
@@ -31,6 +31,7 @@ defopts = Opts
   , input  = [] &= args &= typFile
   
   , global = False &= help "calculate global statistics"
+  , sync   = False &= help "use 'sync'-compatible format (A:T:C:G:N:-)"
 
   -- Overall statistics
   , chi2   = False &= help "calculate chi² probability" &= ignore

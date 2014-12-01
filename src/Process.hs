@@ -2,16 +2,18 @@
 
 module Process (proc_fused, run_procs, showPile') where
 
-import Options
+import qualified Options
+import Options (Options, output, threads)
 import ParMap  (parMap)
-import MPileup (readPile1, counts, showC, showV, MPileRecord(..))
+import MPileup (readPile1, counts, MPileRecord(..))
 import Metrics (pi_k, f_st, nd
                , conf_all, ds_all, dsw_all, maf
                , fst_params, ppi_params, dsconf_pairs)
 import Count   (getV, covC, Counts(..), ptSum)
+import Variants (Variant(..))
 import ESIV    (esiv)
 
-import Data.List (tails)
+import Data.List (tails, intercalate, nub)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Text.Printf
@@ -89,7 +91,7 @@ proc_gfst o = proc_fold zero f
   where f (MPR sup _ _ _ cts) cur =
           let new = Metrics.fst_params cts
               cov = sum $ map covC cts
-          in if sup || (max_cov o > 0 && cov > max_cov o) || cov < min_cov o 
+          in if sup || (Options.max_cov o > 0 && cov > Options.max_cov o) || cov < Options.min_cov o
              then cur else deepSeq $ zipWith (zipWith plus) cur new
         zero = repeat (repeat (0,0))
         plus (a,c) (b,d) = (a+b,c+d)
@@ -107,6 +109,7 @@ out_gfst xs = do
           putStrLn $ unwords $ map (\(t,w) -> printf "%.3f" ((t-w)/t)) l
           go (i+1) ls
         go _ [] = return ()
+  -- outputs one line too many?
 
 -- --------------------------------------------------
 
@@ -121,7 +124,7 @@ proc_gppi o = proc_fold zero f
   where f (MPR sup _ _ _ cts) (uv,cur) =
           let new = Metrics.ppi_params cts
               cov = sum $ map covC cts
-              ign = sup || (max_cov o > 0 && cov > max_cov o) || cov < min_cov o
+              ign = sup || (Options.max_cov o > 0 && cov > Options.max_cov o) || cov < Options.min_cov o
               nu = if ign then uv else add_uv uv (fromIntegral cov)
               nc = if ign then cur else (deepSeq (zipWith (zipWith plus) cur new))
           in nu `seq` nc `seq` (nu,nc)
@@ -193,8 +196,8 @@ showPile' o m = M m (showPile o m)
 
 showPile :: Options -> MPileRecord -> B.ByteString
 showPile _ (MPR _ _ _ _ []) = error "Pileup with no data?"
-showPile o mpr = if suppress o && ignore mpr && (all null (map getV $ counts mpr) || not (variants o)) then B.empty else (B.concat
-          [ default_out mpr
+showPile o mpr = if Options.suppress o && ignore mpr && (all null (map getV $ counts mpr) || not (Options.variants o)) then B.empty else (B.concat
+          [ if (Options.sync o) then sync_out mpr else default_out mpr
           , when (Options.f_st o) (printf "\t%.3f" (Metrics.f_st $ counts mpr))
           , when (Options.pi_k o) (printf "\t%.3f" (Metrics.pi_k $ counts mpr))
 --        , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele $ counts mpr))
@@ -219,10 +222,38 @@ showPile o mpr = if suppress o && ignore mpr && (all null (map getV $ counts mpr
 default_out :: MPileRecord -> B.ByteString
 default_out (MPR _ chr pos ref stats) =
   B.concat ([chr',tab,pos',tab,B.singleton ref]++samples++fmtcounts)
-    where cnts = map showC stats
+    where cnts = map showC1 stats
           tab  = B.pack "\t"
           samples = [B.append tab (B.pack s) | s <- map fst cnts]
           fmtcounts  = [tab,B.pack $ show $ sum $ map snd cnts] -- todo: add indels?
           chr' = B.concat (BL.toChunks chr)
           pos' = B.concat (BL.toChunks pos)
+
+-- | Show SNP counts and coverage
+showC1 :: Counts -> (String,Int)
+showC1 x = (" "++(intercalate "/" $ map show [getA_ x,getC_ x,getG_ x,getT_ x]),covC x)
+
+-- | The default output, with only coverage statistics
+sync_out :: MPileRecord -> B.ByteString
+sync_out (MPR _ chr pos ref stats) =
+  B.concat ([chr',tab,pos',tab,B.singleton ref]++samples++fmtcounts)
+    where cnts = map showC2 stats
+          tab  = B.pack "\t"
+          samples = [B.append tab (B.pack s) | s <- map fst cnts]
+          fmtcounts  = [tab,B.pack $ show $ sum $ map snd cnts] -- todo: add indels?
+          chr' = B.concat (BL.toChunks chr)
+          pos' = B.concat (BL.toChunks pos)
+
+-- | Show SNP counts and coverage
+showC2 :: Counts -> (String,Int)
+showC2 x = (" "++(intercalate ":" $ map show [getA_ x,getC_ x,getG_ x,getT_ x,getN_ x,getDel_ x]),covC x)
+
+
+-- | Show structural variant count
+showV :: [Counts] -> String
+showV cs = let
+  vs = [[v | Ins v <- getV c] | c <- cs]
+  vuniq = nub $ concat vs
+  countV v = map (length . filter (==v)) vs
+  in intercalate "," $ [unwords (v:(map show $ countV v)) | v <- vuniq]
 

@@ -1,8 +1,8 @@
 {-# Language BangPatterns #-}
-module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, showC, showV, sumList, MPileRecord(..)) where
+module MPileup (Counts(..), readPile1, toList, major_allele, by_major_allele, sumList, MPileRecord(..)) where
 
 import Data.Char (toUpper)
-import Data.List (intercalate,nub,elemIndex)
+import Data.List (elemIndex)
 import qualified Data.ByteString.Lazy.Char8 as B
 import Variants hiding (parse)
 import Count
@@ -70,15 +70,3 @@ readPile1 = parse1 . B.split '\t'  -- later samtools sometimes outputs empty str
                                          in parse ref (addV cts var) (B.drop (fromIntegral cnt) rest)
                 | otherwise            = error ("Not a nucleotide: "++show c)
               addRef = case toUpper ref of { 'A' -> addA_; 'C' -> addC_; 'G' -> addG_; 'T' -> addT_; _ -> addN_ }
-
--- | Show SNP counts and coverage
-showC :: Counts -> (String,Int)
-showC x = (" "++(intercalate ":" $ map show [getA_ x,getC_ x,getG_ x,getT_ x,getN_ x,getDel_ x]),covC x)
-
--- | Show structural variant count
-showV :: [Counts] -> String
-showV cs = let
-  vs = [[v | Ins v <- getV c] | c <- cs]
-  vuniq = nub $ concat vs
-  countV v = map (length . filter (==v)) vs
-  in intercalate "," $ [unwords (v:(map show $ countV v)) | v <- vuniq]
