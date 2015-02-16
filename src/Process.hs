@@ -203,13 +203,13 @@ showPile o mpr = if Options.suppress o && ignore mpr && (all null (map getV $ co
 --        , when (Options.chi2 o) (printf "\t%.3f" (Metrics.pearsons_chi² $ by_major_allele $ counts mpr))
           , when (Options.conf o) (conf_all $ counts mpr)
           , when (Options.pconf o) ("\t"++dsconf_pairs 0.01 (counts mpr))
-          , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all 2.326 $ counts mpr))
-          , when (Options.dsw o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ dsw_all 2.326 $ counts mpr))
+          , when (Options.ds o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ ds_all (Options.sigma o) $ counts mpr))
+          , when (Options.dsw o) ("\t"++(unwords $ map (\x -> if x>=0 then printf "%.2f" x else " -  ") $ dsw_all (Options.sigma o) $ counts mpr))
           , when (Options.nd_all o) ("\t"++(unwords $ map (printf "%.2f" . nd) $ counts mpr)++"\t"++printf "%.3f" (nd $ ptSum $ counts mpr))
           , when (Options.maf o) ("\t"++unwords (map (printf "%.2f" . Metrics.maf) (counts mpr)))
 
           -- Between pairs of samples
-          , when (Options.esi o) (pairwise (ESIV.esiv 1.64 0.01) (counts mpr))
+          , when (Options.esi o) (pairwise (ESIV.esiv (Options.sigma o) (Options.epsilon o)) (counts mpr))
 
           , when (Options.variants o) ("\t"++showV (counts mpr))
           , B.pack "\n"

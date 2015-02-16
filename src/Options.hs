@@ -16,14 +16,15 @@ data Options = Opts
   , global, sync :: Bool
   , threads :: Int
   , min_cov, max_cov :: Int
+  , epsilon, sigma :: Double
   } deriving (Typeable,Data)
 
 defopts :: Options
 defopts = Opts 
   { 
   -- General parameters
-    output = "" &= help "output file name" &= typFile
-  , suppress = False &= help "omit non-variant lines from output"
+    output = "" &= name "o" &= help "output file name" &= typFile
+  , suppress = False &= name "s" &= help "omit non-variant lines from output"
   , variants = False &= help "output list of non-SNP variants"
   , threads = 100 &= help "queue lenght for parallel execution"
   , min_cov = 0     &= help "minimum coverage to include"
@@ -47,7 +48,10 @@ defopts = Opts
   , maf    = False &= help "minor allele frequency per position"
 
   -- Statistics for all sample pairs
-  , esi    = False &= help "output conservative expected site information for SNPs using Agresti-Coull intervals"
+  , esi    = False &= name "e" &= help "output conservative expected site information for SNPs using Agresti-Coull intervals"
+
+  , epsilon = 0.01 &= help "error estimate to use for calculating information value"
+  , sigma   = 1.64 &= help "number of standard deviation for confidence intervals (e.g. for ESI)"
   }
   &= program ("varan "++version)
   &= summary "Identify genetic variants from pooled sequences."
