@@ -7,6 +7,7 @@ import Count
 import qualified Data.ByteString.Lazy.Char8 as BL
 
 import System.Console.CmdArgs
+import Options (version, citation)
 
 data Options = Opts { infile, outfile :: Maybe FilePath
                     , format :: Format
@@ -22,17 +23,14 @@ opts = Opts
   , fasta  = False &= help "output FASTA header"
   , mincount = 1 &= help "ignore counts less than this"
   , minfreq  = 5 &= help "ignore allele frequencies less than this"
-  } &= program "vextr v0.5.1"
+  } &= program ("vextr "++version)
     &= summary "Extract consensus sequence from pooled sequences"
-    &= details ["Examples:", ""
+    &= details (["Examples:", ""
              ,"Read input from a pipe, output IUPAC codes:"
              ,"", "  samtools mpileup -f ref.fasta reads.bam | vextr --format=iupac", ""
              ,"Read input from a file, create consensus FASTA sequence:"
              ,"", "  vextr input.mpile --fasta -o output.fasta", ""
-             ,"If you use this program, please cite:"
-             ,"  BMC Genomics 2014, 15(Suppl 6):S20"
-             ,"  http://www.biomedcentral.com/1471-2164/15/S6/S20"
-               ]
+             ]++citation)
 
 data Format = Xs | IUPAC | Regex deriving (Data,Typeable,Show)
 

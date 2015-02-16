@@ -1,6 +1,6 @@
 {-# Language DeriveDataTypeable #-}
 
-module Options (Options(..), getArgs) where
+module Options (Options(..), getArgs, version, citation) where
 
 import System.Console.CmdArgs
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -49,17 +49,23 @@ defopts = Opts
   -- Statistics for all sample pairs
   , esi    = False &= help "output conservative expected site information for SNPs using Agresti-Coull intervals"
   }
-  &= program "varan v0.5.1"
+  &= program ("varan "++version)
   &= summary "Identify genetic variants from pooled sequences."
-  &= details ["Examples:", ""
+  &= details (["Examples:", ""
              ,"Read input from a pipe, calculate site-wise Fst and confidence intervals, ignoring non-variant sites:"
              ,"", "  samtools mpileup -f ref.fasta reads.bam | varan --fst --conf -s -o snps.txt", ""
              ,"Read input from a file, send the site-wise output to /dev/null, and only output global statistics to standard output:"
-             ,"", "  varan --global -o /dev/null input.mpile", ""
-             ,"If you use this program, please cite:"
+             ,"", "  varan --global -o /dev/null input.mpile", ""]
+  ++ citation)
+
+citation :: [String]
+citation = [ "If you use this program, please cite:"
              ,"  BMC Genomics 2014, 15(Suppl 6):S20"
              ,"  http://www.biomedcentral.com/1471-2164/15/S6/S20"
                ]    
+
+version :: String
+version = "v0.5.2"
 
 getArgs :: IO (IO BL.ByteString,Options)
 getArgs = do

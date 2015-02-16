@@ -13,7 +13,8 @@ import ESIV
 import Count
 import VExtr (makeConsensus, Format(IUPAC))
 import MPileup
--- import Count
+import Options (version, citation)
+
 import qualified Data.ByteString.Lazy.Char8 as BL
 
 data Options = Test
@@ -33,20 +34,14 @@ main :: IO ()
 main = do
   opts <- cmdArgsRun $ cmdArgsMode $ modes [test,disp,info,cite]
           &= summary "Visualize information from 'samtools mpileup' as sparklines"
-          &= program "sparks v0.5.1"
+          &= program ("sparks "++version)
   inp <- BL.getContents
   let ms = map readPile1 $ BL.lines inp
   mapM_ putStrLn $ case opts of
      Test -> teststr
      Disp -> sparklines ms
      Info -> infoline ms
-     Cite -> citestr
-
-citestr :: [String]
-citestr = ["If you use this program, please cite:"
-          ,"  BMC Genomics 2014, 15(Suppl 6):S20"
-          ,"  http://www.biomedcentral.com/1471-2164/15/S6/S20"
-          ]
+     Cite -> citation
 
 teststr :: [String]
 teststr = [ concat [count2char [5,b,0,0] | b <- [0..10]]
