@@ -64,7 +64,7 @@ makeConsensus (iup,mct,mfq) = concatMap (fixiup iup . selectChar mct mfq . ptSum
 
 -- | Optionally change from IUPAC code to X or regex
 fixiup :: Format -> Char -> String
-fixiup iup c | c `elem` "ACGTacgtNn" = [c]
+fixiup iup c | c `elem` "ACGTacgt" = [c]
              | otherwise             = case iup of
           Xs -> "X"
           IUPAC -> [c]
@@ -79,6 +79,7 @@ fixiup iup c | c `elem` "ACGTacgtNn" = [c]
             'D' -> "[A/G/T]"
             'H' -> "[A/C/T]"
             'V' -> "[A/C/G]"
+            'N' -> "[A/C/G/T]"
             x   -> [x]
 
 -- | Convert allele counts into IUPAC character
