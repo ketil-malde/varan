@@ -90,7 +90,7 @@ selectChar mct mfq ss =
       t  = sum xs
       as = map (>0) xs
       bs = map (\x -> x >= mct && x >= t*mfq`div`100) xs
-      char = case as of
+      char = case bs of
           [False,False,False,False] -> 'n'
           [True,False,False,False] -> 'A'
           [False,True,False,False] -> 'C'
