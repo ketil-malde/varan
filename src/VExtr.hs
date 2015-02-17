@@ -5,6 +5,7 @@ module VExtr where
 import MPileup
 import Count
 import qualified Data.ByteString.Lazy.Char8 as BL
+import Data.Char (toLower,toUpper)
 
 import System.Console.CmdArgs
 import Options (version, citation)
@@ -68,7 +69,7 @@ fixiup iup c | c `elem` "ACGTacgt" = [c]
              | otherwise             = case iup of
           Xs -> "X"
           IUPAC -> [c]
-          Regex -> case c of
+          Regex -> case toUpper c of
             'R' -> "[A/G]"
             'Y' -> "[C/T]"
             'S' -> "[C/G]"
@@ -84,27 +85,28 @@ fixiup iup c | c `elem` "ACGTacgt" = [c]
 
 -- | Convert allele counts into IUPAC character
 selectChar :: Int -> Int -> Counts -> Char
-selectChar mct mfq ss = case toList ss of
-          [0,0,0,0] -> 'n'
-          [_,0,0,0] -> 'A'
-          [0,_,0,0] -> 'C'
-          [0,0,_,0] -> 'G'
-          [0,0,0,_] -> 'T'
+selectChar mct mfq ss =
+  let xs = toList ss
+      t  = sum xs
+      as = map (>0) xs
+      bs = map (\x -> x >= mct && x >= t*mfq`div`100) xs
+      char = case as of
+          [False,False,False,False] -> 'n'
+          [True,False,False,False] -> 'A'
+          [False,True,False,False] -> 'C'
+          [False,False,True,False] -> 'G'
+          [False,False,False,True] -> 'T'
 
-          [x,0,y,0] -> maybeWild x y 'a' 'g' 'R'
-          [0,x,0,y] -> maybeWild x y 'c' 't' 'Y'
-          [0,x,y,0] -> maybeWild x y 'c' 'g' 'S'
-          [x,0,0,y] -> maybeWild x y 'a' 't' 'W'
-          [0,0,x,y] -> maybeWild x y 'g' 't' 'K'
-          [x,y,0,0] -> maybeWild x y 'a' 'c' 'M'
+          [True,False,True,False] -> 'R'
+          [False,True,False,True] -> 'Y'
+          [False,True,True,False] -> 'S'
+          [True,False,False,True] -> 'W'
+          [False,False,True,True] -> 'K'
+          [True,True,False,False] -> 'M'
 
-          [0,_,_,_] -> 'B'
-          [_,0,_,_] -> 'D'
-          [_,_,0,_] -> 'H'
-          [_,_,_,0] -> 'V'
-
+          [False,True,True,True] -> 'B'
+          [True,False,True,True] -> 'D'
+          [True,True,False,True] -> 'H'
+          [True,True,True,False] -> 'V'
           _ -> 'N'
-  where maybeWild x y c1 c2 c3 =
-          let xok = x > mct && x > (x+y)*mfq`div`100
-              yok = y > mct && y > (x+y)*mfq`div`100
-          in if xok && yok then c3 else if xok then c1 else if yok then c2 else 'n'
+      in (if as == bs then id else toLower) char
