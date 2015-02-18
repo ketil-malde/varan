@@ -59,9 +59,6 @@ makeFasta fi ms = let
 
 makeConsensus :: (Format,Int,Int) -> [MPileRecord] -> String
 makeConsensus (iup,mct,mfq) = concatMap (fixiup iup . selectChar mct mfq . ptSum . counts)
-  -- todo: include variants
-
--- this doesn't work so well with high coverage/many libraries
 
 -- | Optionally change from IUPAC code to X or regex
 fixiup :: Format -> Char -> String
@@ -69,6 +66,7 @@ fixiup iup c | c `elem` "ACGTacgt" = [c]
              | otherwise             = case iup of
           Xs -> "X"
           IUPAC -> [c]
+          -- this should use upper/lower case to show (very) minor alleles
           Regex -> case toUpper c of
             'R' -> "[A/G]"
             'Y' -> "[C/T]"
