@@ -45,6 +45,10 @@ varan [options] sample1.mpileup > OUT
 
 ## Output
 
+(Sorry, this section is a bit outdated - in particular, the allele
+counts are now either `as/cs/gs/ts` by default, or `as:ts:cs:gs:ns:gaps`
+if the `--sync` option is specified.)
+
 After filtering this through `varan` as above, you get something that
 looks like:
 
@@ -69,9 +73,7 @@ LSalAtl2s1      163     G        0:0:18:0        0:0:19:0       -       ....    
 Use as an example of output format only, not as a recommendation of
 statistics to use!  Generally, each output option will result in a
 tab-seperated column, and if the output option causes multiple values
-to be output, they are separated with a space.  The exception is the
-allele counts (columns four an on), which are colon-separated, similar
-to the `sync`-files output by the `popoolation` tool.
+to be output, they are separated with a space.
 
 Here we see that each input library (i.e. BAM file) has had the allele frequencies counted
 up as the number of As, Cs, Gs, and Ts for each position.
@@ -162,6 +164,16 @@ the sequence into 60 character lines.
 If IUPAC is not what you want, you can specify `--format=reg` to get
 regular expressions (e.g., `[A/C]`), or `--format=xs` to have ambigous
 bases output as `X` characters.
+
+A typical usage might be to extract sequences around a SNP for primer
+design.  Then, you want flanking sequences with IUPAC codes for
+ambiguities, a regular expression for the SNP site.  You probably also
+want to ignore read errors in the flanking sequences.  Thus something
+like the following should get you what you want:
+
+    samtools mpileup -r CHR8:1900-1999 1.bam 2.bam | vextr --minfreq=5
+    samtools mpileup -r CHR8:2000-2000 1.bam 2.bam | vextr --regex --minfreq=2
+    samtools mpileup -r CHR8:2001-2100 1.bam 2.bam | vextr --minfreq=5	
 
 # Quick and dirty visualization with `sparks`
 
