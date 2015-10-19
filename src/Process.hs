@@ -41,8 +41,8 @@ run_procs o recs@(M r1 _:_) = do
   B.hPutStr outh $ gen_header o r1
   (gi,gfin) <- start_proc proc_gpi
                (\x -> printf "Global pi_k (nucleotide diversity): %d\n" (round x :: Integer))
-  (ppi,pfin) <- start_proc (proc_gppi o) out_gppi
-  (fi,ffin) <- start_proc (proc_gfst o) out_gfst
+  (ppi,pfin) <- start_proc (proc_gppi (length $ counts r1) o) out_gppi
+  (fi,ffin) <- start_proc (proc_gfst (length $ counts r1) o) out_gfst
   let run (M r s:rs) = do
         push_procs (Just r) [gi,ppi,fi]
         B.hPutStr outh s
@@ -86,14 +86,15 @@ proc_gpi = proc_fold 0.0 f
           in if ignore mpr || isNaN p then cur else cur+p
 
 -- | Collect variation within and between for global pairwise Fst
-proc_gfst :: Options -> MVar (Maybe MPileRecord) -> MVar [[(Double, Double)]] -> IO ()
-proc_gfst o = proc_fold zero f
+proc_gfst :: Int -> Options -> MVar (Maybe MPileRecord) -> MVar [[(Double, Double)]] -> IO ()
+proc_gfst n o = proc_fold zero f
   where f (MPR sup _ _ _ cts) cur =
           let new = Metrics.fst_params cts
               cov = sum $ map covC cts
           in if sup || (Options.max_cov o > 0 && cov > Options.max_cov o) || cov < Options.min_cov o
              then cur else deepSeq $ zipWith (zipWith plus) cur new
-        zero = repeat (repeat (0,0))
+        -- zero = repeat (repeat (0,0))
+        zero = [replicate i (0,0) | i <- [n-1, n-2..1]]
         plus (a,c) (b,d) = (a+b,c+d)
         deepSeq x | x == x = x
                   | True   = error (show x)
@@ -119,8 +120,8 @@ add_uv :: UniVar -> Double -> UniVar
 add_uv (UV c s s2) d = UV (c+1) (s+d) (s2+d*d)
 
 -- | Collect nucleotide diversity within and between for global pairwise ND (pi)
-proc_gppi :: Options -> MVar (Maybe MPileRecord) -> MVar (UniVar,[[Double]]) -> IO ()
-proc_gppi o = proc_fold zero f
+proc_gppi :: Int -> Options -> MVar (Maybe MPileRecord) -> MVar (UniVar,[[Double]]) -> IO ()
+proc_gppi n o = proc_fold zero f
   where f (MPR sup _ _ _ cts) (uv,cur) =
           let new = Metrics.ppi_params cts
               cov = sum $ map covC cts
@@ -128,7 +129,7 @@ proc_gppi o = proc_fold zero f
               nu = if ign then uv else add_uv uv (fromIntegral cov)
               nc = if ign then cur else (deepSeq (zipWith (zipWith plus) cur new))
           in nu `seq` nc `seq` (nu,nc)
-        zero = (UV 0 0 0, repeat (repeat 0))
+        zero = (UV 0 0 0, [replicate i 0 | i <- [n, n-1..1]])
         plus a b = if isNaN b then a else a+b
         deepSeq x | x == x = x
                   | True   = error (show x)
