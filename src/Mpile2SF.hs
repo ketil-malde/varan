@@ -20,7 +20,7 @@ main = do
 
 mp2sf :: MPileRecord -> ByteString
 mp2sf mpr = if ignore mpr then B.empty
-            else B.append (cpos mpr) (B.pack (printf "\t%d\td\t1"  refs tot))
+            else B.append (cpos mpr) (B.pack (printf "\t%d\t%d\t1"  refs tot))
   where alleles = toList $ ptSum $ counts mpr :: [Int]
         tot  = sum alleles :: Int
         refs = alleles!!(case refnuc mpr of {'A' -> 0; 'C' -> 1; 'G' -> 2; 'T' -> 3; 'a' -> 0; 'c' -> 1; 'g' -> 2; 't' -> 3}) :: Int
