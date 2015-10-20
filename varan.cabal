@@ -31,3 +31,10 @@ Executable sparks
     Other-Modules:   MPileup, Count
     Build-Depends:   base >= 4 && < 5, bytestring, cmdargs, ansi-terminal
     Ghc-Options:     -rtsopts -Wall -threaded
+
+Executable mp2sf
+    Hs-Source-Dirs:  src
+    Main-Is:         Mpile2SF.hs
+    Other-Modules:   MPileup, Count
+    Build-Depends:   base >= 4 && < 5, bytestring
+    Ghc-Options:     -rtsopts -Wall -threaded
