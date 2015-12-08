@@ -19,11 +19,12 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import Text.Printf
 import System.IO
 import Control.Concurrent
+import Control.Monad (unless)
 
 proc_fused :: Options -> [BL.ByteString] -> IO ()
 proc_fused o (l:ls) = do
   outh <- if null (output o) || output o == "-" then return stdout else openFile (output o) WriteMode
-  B.hPutStr outh $ gen_header o $ readPile1 l
+  unless (Options.sync o) (B.hPutStr outh $ gen_header o $ readPile1 l)
   if threads o > 1 
     then mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1) (l:ls)
     else mapM_ (B.hPutStr outh) $ map (showPile o . readPile1) (l:ls)
@@ -38,7 +39,7 @@ run_procs o recs@(M r1 _:_) = do
   -- initialize default output
   let use_stdout = null (output o) || output o == "-"
   outh <- if use_stdout then return stdout else openFile (output o) WriteMode
-  B.hPutStr outh $ gen_header o r1
+  unless (Options.sync o) (B.hPutStr outh $ gen_header o r1)
   (gi,gfin) <- start_proc proc_gpi
                (\x -> printf "Global pi_k (nucleotide diversity): %d\n" (round x :: Integer))
   (ppi,pfin) <- start_proc (proc_gppi (length $ counts r1) o) out_gppi
@@ -157,7 +158,7 @@ proc_default o imv omv = do
   let use_stdout = null (output o) || output o == "-"
   outh <- if use_stdout then return stdout else openFile (output o) WriteMode
   Just l <- takeMVar imv -- or fail!
-  B.hPutStr outh $ gen_header o l
+  unless (Options.sync o) (B.hPutStr outh $ gen_header o l)
   B.hPutStr outh $ showPile o l
   let run = do
         ml <- takeMVar imv
@@ -237,17 +238,16 @@ showC1 x = (" "++(intercalate "/" $ map show [getA_ x,getC_ x,getG_ x,getT_ x]),
 -- | The default output, with only coverage statistics
 sync_out :: MPileRecord -> B.ByteString
 sync_out (MPR _ chr pos ref stats) =
-  B.concat ([chr',tab,pos',tab,B.singleton ref]++samples++fmtcounts)
+  B.concat ([chr',tab,pos',tab,B.singleton ref]++samples)
     where cnts = map showC2 stats
           tab  = B.pack "\t"
           samples = [B.append tab (B.pack s) | s <- map fst cnts]
-          fmtcounts  = [tab,B.pack $ show $ sum $ map snd cnts] -- todo: add indels?
           chr' = B.concat (BL.toChunks chr)
           pos' = B.concat (BL.toChunks pos)
 
 -- | Show SNP counts and coverage
 showC2 :: Counts -> (String,Int)
-showC2 x = (" "++(intercalate ":" $ map show [getA_ x,getC_ x,getG_ x,getT_ x,getN_ x,getDel_ x]),covC x)
+showC2 x = (" "++(intercalate ":" $ map show [getA_ x,getT_ x,getC_ x,getG_ x,getN_ x,getDel_ x]),covC x)
 
 
 -- | Show structural variant count
