@@ -19,12 +19,11 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import Text.Printf
 import System.IO
 import Control.Concurrent
-import Control.Monad (unless)
 
 proc_fused :: Options -> [BL.ByteString] -> IO ()
 proc_fused o (l:ls) = do
   outh <- if null (output o) || output o == "-" then return stdout else openFile (output o) WriteMode
-  unless (Options.sync o) (B.hPutStr outh $ gen_header o $ readPile1 l)
+  B.hPutStr outh $ gen_header o $ readPile1 l
   if threads o > 1 
     then mapM_ (B.hPutStr outh) =<< parMap (threads o) (showPile o . readPile1) (l:ls)
     else mapM_ (B.hPutStr outh) $ map (showPile o . readPile1) (l:ls)
@@ -39,7 +38,7 @@ run_procs o recs@(M r1 _:_) = do
   -- initialize default output
   let use_stdout = null (output o) || output o == "-"
   outh <- if use_stdout then return stdout else openFile (output o) WriteMode
-  unless (Options.sync o) (B.hPutStr outh $ gen_header o r1)
+  B.hPutStr outh $ gen_header o r1
   (gi,gfin) <- start_proc proc_gpi
                (\x -> printf "Global pi_k (nucleotide diversity): %d\n" (round x :: Integer))
   (ppi,pfin) <- start_proc (proc_gppi (length $ counts r1) o) out_gppi
@@ -158,7 +157,7 @@ proc_default o imv omv = do
   let use_stdout = null (output o) || output o == "-"
   outh <- if use_stdout then return stdout else openFile (output o) WriteMode
   Just l <- takeMVar imv -- or fail!
-  unless (Options.sync o) (B.hPutStr outh $ gen_header o l)
+  B.hPutStr outh $ gen_header o l
   B.hPutStr outh $ showPile o l
   let run = do
         ml <- takeMVar imv
@@ -173,7 +172,7 @@ proc_default o imv omv = do
 
 -- generate the appropriate header, based on number of input pools
 gen_header :: Options -> MPileRecord -> B.ByteString
-gen_header o (MPR _ _ _ _ cs) = B.pack $ concat [
+gen_header o (MPR _ _ _ _ cs) = if Options.sync o then B.empty else B.pack $ concat [
   standard
   ,if Options.f_st o then "\tF_st" else ""
   ,if Options.pi_k o then "\tPi_k" else ""

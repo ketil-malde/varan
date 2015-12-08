@@ -90,21 +90,32 @@ selectChar mct mfq ss =
       bs = map (\x -> x >= mct && x >= t*mfq`div`100) xs
       char = case bs of
           [False,False,False,False] -> 'n'
-          [True,False,False,False] -> 'A'
-          [False,True,False,False] -> 'C'
-          [False,False,True,False] -> 'G'
-          [False,False,False,True] -> 'T'
+          [True ,False,False,False] -> 'A'
+          [False,True, False,False] -> 'C'
+          [False,False,True, False] -> 'G'
+          [False,False,False,True ] -> 'T'
 
-          [True,False,True,False] -> 'R'
-          [False,True,False,True] -> 'Y'
-          [False,True,True,False] -> 'S'
-          [True,False,False,True] -> 'W'
-          [False,False,True,True] -> 'K'
-          [True,True,False,False] -> 'M'
+          [True, False,True ,False] -> 'R'
+          [False,True ,False,True ] -> 'Y'
+          [False,True ,True ,False] -> 'S'
+          [True ,False,False,True ] -> 'W'
+          [False,False,True ,True ] -> 'K'
+          [True ,True ,False,False] -> 'M'
 
-          [False,True,True,True] -> 'B'
-          [True,False,True,True] -> 'D'
-          [True,True,False,True] -> 'H'
-          [True,True,True,False] -> 'V'
+          [False,True ,True ,True ] -> 'B'
+          [True ,False,True ,True ] -> 'D'
+          [True ,True ,False,True ] -> 'H'
+          [True ,True ,True ,False] -> 'V'
           _ -> 'N'
       in (if as == bs then id else toLower) char
+
+{-
+   a better way to do this, might be to have selectChar return the set of alleles
+   in upper/lower case, sorted by frequency.  So e.g. "GTa" means that G and T are present
+   above some threshold, a is rare, and c is seen rarely enough to be ignored.  IUPAC might then be 'k',
+   and regex might be [G/T/a].  Do other programs expect regexps to be ordered?
+
+   Another thing to consider might be multiple samples.  A couple of rare alleles in a single sample
+   are likely read errors, but if they occur in multiple samples, they are more likely to be real.
+   OTOH, errors depend on local context, so errors in samples are not independent... not so easy, this.
+-}

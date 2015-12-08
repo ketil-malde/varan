@@ -17,6 +17,7 @@ import Count
 main :: IO ()
 main = do
   mps <- map readPile1 `fmap` B.lines `fmap` B.getContents
+  putStrLn "position\tx\tn\tfolded"
   mapM_ B.putStrLn . catMaybes $ map mp2sf mps
 
 mp2sf :: MPileRecord -> Maybe B.ByteString
