@@ -45,9 +45,9 @@ varan [options] sample1.mpileup > OUT
 
 ## Output
 
-(Sorry, this section is a bit outdated - in particular, the allele
-counts are now either `as/cs/gs/ts` by default, or `as:ts:cs:gs:ns:gaps`
-if the `--sync` option is specified.)
+(Sorry, this example in this section is a bit outdated - in
+particular, the allele counts are now either `as/cs/gs/ts` by default,
+or `as:ts:cs:gs:ns:gaps` if the `--sync` option is specified.)
 
 After filtering this through `varan` as above, you get something that
 looks like:
