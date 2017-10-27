@@ -52,7 +52,7 @@ teststr = [ concat [count2char [5,b,0,0] | b <- [0..10]]
 infoline :: [MPileRecord] -> [String]
 infoline ms = (cons:esivs)
   where
-    cons = makeConsensus (IUPAC,1,5) ms
+    cons = makeConsensus (IUPAC,1,5,False) ms
     esivs = map (concat . (++ rst)) $ transpose $ map esivstr ms
     rst = [setSGRCode []]
 

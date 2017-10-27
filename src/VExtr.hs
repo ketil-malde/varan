@@ -12,7 +12,7 @@ import Options (version, citation)
 
 data Options = Opts { infile, outfile :: Maybe FilePath
                     , format :: Format
-                    , fasta :: Bool
+                    , fasta, pad :: Bool
                     , mincount :: Int
                     , minfreq :: Int } deriving (Data,Typeable)
 
@@ -22,8 +22,9 @@ opts = Opts
   , outfile = Nothing &= help "output file"
   , format = IUPAC &= help "output X, N, or [a/b] instead of IUPAC codes for variable sites"
   , fasta  = False &= help "output FASTA header"
+  , pad    = False &= help "pad start of output with Ns"
   , mincount = 1 &= help "ignore counts less than this"
-  , minfreq  = 5 &= help "ignore allele frequencies less than this"
+  , minfreq  = 5 &= help "ignore allele frequencies less than this (in percent)"
   } &= program ("vextr "++version)
     &= summary "Extract consensus sequence from pooled sequences"
     &= details (["Examples:", ""
@@ -44,21 +45,28 @@ main = do
       outf = case outfile o of Nothing -> putStr
                                Just f -> writeFile f
       gen = if fasta o then makeFasta else makeConsensus
-  outf $ gen (format o,mincount o,minfreq o) ms
+  outf $ gen (format o,mincount o,minfreq o,pad o) ms
 
 
-makeFasta :: (Format,Int,Int) -> [MPileRecord] -> String
+makeFasta :: (Format,Int,Int,Bool) -> [MPileRecord] -> String
 makeFasta fi ms = let
   header = case ms of
-    (m1:_) -> '>':BL.unpack (chrom m1)++":"++BL.unpack (cpos m1)
+    (m1:_) -> '>':BL.unpack (chrom m1)++posinf
+      where posinf = case fi of
+              (_,_,_,False) -> ":"++BL.unpack (cpos m1)
+              _ -> ""
     [] -> ""
   breaks str = case splitAt 60 str of
     (rest,"") -> [rest]
     (this,more) -> this : breaks more
   in unlines (header:breaks (makeConsensus fi ms))
 
-makeConsensus :: (Format,Int,Int) -> [MPileRecord] -> String
-makeConsensus (iup,mct,mfq) = concatMap (fixiup iup . selectChar mct mfq . ptSum . counts)
+makeConsensus :: (Format,Int,Int,Bool) -> [MPileRecord] -> String
+makeConsensus (iup,mct,mfq,pd) ms = prefix ++ concatMap (fixiup iup . selectChar mct mfq . ptSum . counts) ms
+  where prefix = if pd then replicate padlen 'N' else []
+        padlen = case ms of
+          (m1:_) -> read (BL.unpack (cpos m1))
+          _ -> 0
 
 -- | Optionally change from IUPAC code to X or regex
 fixiup :: Format -> Char -> String
