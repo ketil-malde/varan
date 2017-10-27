@@ -65,7 +65,7 @@ makeConsensus :: (Format,Int,Int,Bool) -> [MPileRecord] -> String
 makeConsensus (iup,mct,mfq,pd) ms = prefix ++ concatMap (fixiup iup . selectChar mct mfq . ptSum . counts) ms
   where prefix = if pd then replicate padlen 'N' else []
         padlen = case ms of
-          (m1:_) -> read (BL.unpack (cpos m1))
+          (m1:_) -> read (BL.unpack (cpos m1)) - 1
           _ -> 0
 
 -- | Optionally change from IUPAC code to X or regex
