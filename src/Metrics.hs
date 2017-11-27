@@ -30,16 +30,23 @@ ppi_params [] = []
 -- calculate diversity within and between sample pairs
 fst_params :: [Counts] -> [[(Double,Double)]]
 fst_params (x:xs) = go (x:xs)
-  where go (y:ys) = map (heteroz y) ys : go ys
+  where go (y:ys) = map (heteroz_weighted y) ys : go ys
         go [] = []
 fst_params [] = []
 
 -- | Calculate heterozyogisity total, and within groups
--- Not weighting by coverage.
+-- Not weighting by coverage, this sometimes causes negative Fst values.
 heteroz :: Counts -> Counts -> (Double, Double)
 heteroz c1 c2 = let nd_tot = nd c1 + nd c2
                 in if covC c1 == 0 || covC c2 == 0 then (0,0) 
                    else (nd (c1 `ptAdd` c2), nd_tot/2)
+
+-- | Calculate heterozygosizty adjusted for coverage
+heteroz_weighted :: Counts -> Counts -> (Double,Double)
+heteroz_weighted c1 c2 = if covC c1 == 0 || covC c2 == 0 then (0,0)
+                         else let nd_tot = nd c1 + nd c2
+                                  f c = map (/fromIntegral (covC c)) (toList c)
+                              in (1-sum (zipWith (*) (f c1) (f c2)), nd_tot/2)
 
 -- Weighted heterozygosity
 heteroz_w :: Counts -> Counts -> (Double,Double)
