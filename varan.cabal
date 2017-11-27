@@ -11,6 +11,10 @@ Description:   Post-processing output from `samtools mpileup` to extract various
 	       including statistics (per-position or global), consensus sequence (in various
 	       formats), and textual visualizations.
 
+Source-repository head
+  Type:     git
+  Location: http://github.com/ketil-malde/varan
+
 Executable varan
     Hs-Source-Dirs:  src
     Main-Is:         Varan.hs
