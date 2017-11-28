@@ -41,12 +41,12 @@ heteroz c1 c2 = let nd_tot = nd c1 + nd c2
                 in if covC c1 == 0 || covC c2 == 0 then (0,0) 
                    else (nd (c1 `ptAdd` c2), nd_tot/2)
 
--- | Calculate heterozygosizty adjusted for coverage
+-- | Calculate heterozygosizty using average frequencies
 heteroz_weighted :: Counts -> Counts -> (Double,Double)
 heteroz_weighted c1 c2 = if covC c1 == 0 || covC c2 == 0 then (0,0)
-                         else let nd_tot = nd c1 + nd c2
-                                  f c = map (/fromIntegral (covC c)) (toList c)
-                              in (1-sum (zipWith (*) (f c1) (f c2)), nd_tot/2)
+                         else let nd_w = (nd c1 + nd c2)/2
+                                  nd_t = 1-sum [((f1+f2)/2)^(2::Int) | (f1,f2) <- zip  (pi_freqs c1) (pi_freqs c2)]
+                              in (nd_t, nd_w)
 
 -- Weighted heterozygosity
 heteroz_w :: Counts -> Counts -> (Double,Double)

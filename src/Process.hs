@@ -107,7 +107,7 @@ out_gfst xs = do
   go 1 xs
   where go i (l:ls) = do 
           putStr ("s"++show i++replicate (6*i-4) ' ')
-          putStrLn $ unwords $ map (\(t,w) -> printf "%.3f" ((t-w)/t)) l
+          putStrLn $ unwords $ map (\(t,w) -> printf "%.3f" (if t>0 then (t-w)/t else 0)) l
           go (i+1) ls
         go _ [] = return ()
   -- outputs one line too many?
